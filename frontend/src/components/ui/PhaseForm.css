@@ -1,0 +1,38 @@
+.phase-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.phase-form-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.phase-form-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.phase-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+@media (max-width: 600px) {
+  .phase-form-dates {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .phase-form-actions button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,27 @@
+.standings-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.standings-table-wrapper {
+  width: 100%;
+}
+
+.standings-position {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.standings-team-name {
+  color: var(--color-text);
+}
+
+.standings-points {
+  color: var(--color-primary-900);
+  font-size: var(--text-md);
+}

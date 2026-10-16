@@ -1,0 +1,38 @@
+.ui-error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.ui-error-message > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.ui-error-message-content {
+  min-width: 0;
+}
+
+.ui-error-message-content strong,
+.ui-error-message-content span {
+  display: block;
+}
+
+.ui-error-message-content strong {
+  font-size: var(--text-sm);
+}
+
+.ui-error-message-content span {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.ui-error-message-action {
+  margin-top: var(--space-3);
+}

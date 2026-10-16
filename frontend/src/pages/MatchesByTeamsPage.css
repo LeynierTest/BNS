@@ -1,0 +1,54 @@
+.matches-by-teams-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.matches-by-teams-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: var(--space-4);
+  align-items: end;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.matches-by-teams-search {
+  display: flex;
+  align-items: end;
+}
+
+.matches-by-teams-teams {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.matches-by-teams-teams strong {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .matches-by-teams-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.matches-by-teams-teams {
+  min-width: 0;
+  flex-wrap: wrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.matches-by-teams-teams span {
+  min-width: 0;
+}
+
+.matches-by-teams-teams strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

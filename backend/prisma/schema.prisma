@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model app_user {
+  user_id       Int     @id @default(autoincrement())
+  username      String  @unique(map: "app_user_username_uq") @db.VarChar(50)
+  email         String  @unique(map: "app_user_email_uq") @db.VarChar(150)
+  password_hash String  @db.VarChar(255)
+  active        Boolean @default(true)
+  photo_url     String? @db.VarChar(255)
+  role_id       Int
+  role          role    @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "app_user_role_fk")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model coach {
+  team_member_id   Int         @id
+  years_experience Int
+  team_member      team_member @relation(fields: [team_member_id], references: [team_member_id], onDelete: Cascade, onUpdate: NoAction, map: "coach_team_member_fk")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model match {
+  match_id                      Int      @id @default(autoincrement())
+  away_team_id                  Int
+  home_team_id                  Int
+  match_date                    DateTime @db.Date
+  stadium_id                    Int
+  phase_id                      Int
+  away_score                    Int
+  home_score                    Int
+  attendance                    Int
+  team_match_away_team_idToteam team     @relation("match_away_team_idToteam", fields: [away_team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "match_away_team_fk")
+  team_match_home_team_idToteam team     @relation("match_home_team_idToteam", fields: [home_team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "match_home_team_fk")
+  phase                         phase    @relation(fields: [phase_id], references: [phase_id], onDelete: NoAction, onUpdate: NoAction, map: "match_phase_fk")
+  stadium                       stadium  @relation(fields: [stadium_id], references: [stadium_id], onDelete: NoAction, onUpdate: NoAction, map: "match_stadium_fk")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model phase {
+  phase_id   Int      @id @default(autoincrement())
+  name       String   @db.VarChar(50)
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+  match      match[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model player {
+  team_member_id  Int         @id
+  position        String      @db.VarChar(50)
+  at_bats         Int?
+  innings_pitched Decimal?    @db.Decimal(6, 2)
+  hits            Int?
+  runs_allowed    Int?
+  batting_average Decimal?    @db.Decimal(5, 3)
+  team_member     team_member @relation(fields: [team_member_id], references: [team_member_id], onDelete: Cascade, onUpdate: NoAction, map: "player_team_member_fk")
+}
+
+model role {
+  role_id  Int        @id @default(autoincrement())
+  name     String     @unique(map: "role_name_uq") @db.VarChar(50)
+  app_user app_user[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stadium {
+  stadium_id Int     @id @default(autoincrement())
+  name       String  @db.VarChar(150)
+  capacity   Int
+  province   String  @db.VarChar(100)
+  match      match[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model team {
+  team_id                        Int           @id @default(autoincrement())
+  name                           String        @db.VarChar(100)
+  province                       String        @db.VarChar(100)
+  championships_participated     Int
+  championships_won              Int
+  mascot                         String        @db.VarChar(100)
+  color                          String        @db.VarChar(50)
+  match_match_away_team_idToteam match[]       @relation("match_away_team_idToteam")
+  match_match_home_team_idToteam match[]       @relation("match_home_team_idToteam")
+  team_member                    team_member[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model team_member {
+  team_member_id Int     @id @default(autoincrement())
+  name           String  @db.VarChar(150)
+  number         Int
+  years_on_team  Int
+  team_id        Int
+  coach          coach?
+  player         player?
+  team           team    @relation(fields: [team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "team_member_team_fk")
+
+  @@unique([team_id, number], map: "team_member_team_number_uq")
+}

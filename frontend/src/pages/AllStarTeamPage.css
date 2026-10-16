@@ -1,0 +1,29 @@
+.all-star-team-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.all-star-position {
+  display: inline-flex;
+  align-items: center;
+  min-width: 7rem;
+  color: var(--color-primary-900);
+  font-weight: 700;
+}
+
+.all-star-player {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.all-star-team {
+  color: var(--color-text-secondary);
+}
+
+.all-star-average {
+  color: var(--color-primary-900);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+}

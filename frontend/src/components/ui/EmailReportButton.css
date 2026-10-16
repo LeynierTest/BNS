@@ -1,0 +1,152 @@
+.email-report-button {
+  box-sizing: border-box;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--color-text);
+  border-radius: var(--radius-sm);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.email-report-button:hover:not(:disabled) {
+  background: var(--color-text-secondary);
+  border-color: var(--color-text-secondary);
+  transform: translateY(-1px);
+}
+
+.email-report-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.email-report-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.email-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.email-report-modal {
+  width: min(100%, 430px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: var(--background-color, #ffffff);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.25);
+}
+
+.email-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.email-report-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.email-report-close {
+  border: none;
+  background: transparent;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.email-report-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.email-report-modal label {
+  font-weight: 600;
+}
+
+.email-report-modal input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font: inherit;
+}
+
+.email-report-modal input:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.email-report-error,
+.email-report-success {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.email-report-error {
+  font-weight: 600;
+}
+
+.email-report-success {
+  font-weight: 600;
+}
+
+.email-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.email-report-cancel,
+.email-report-submit {
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.email-report-cancel:disabled,
+.email-report-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.report-actions .pdf-download-button,
+.report-actions .email-report-button {
+  margin: 0;
+}

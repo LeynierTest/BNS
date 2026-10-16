@@ -1,0 +1,49 @@
+.stadium-form {
+  width: 100%;
+}
+
+.stadium-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.stadium-form-grid > :last-child {
+  grid-column: 1 / -1;
+}
+
+.stadium-form-server-error {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid #fecdca;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.stadium-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .stadium-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stadium-form-grid > :last-child {
+    grid-column: auto;
+  }
+
+  .stadium-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .stadium-form-actions > button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,21 @@
+@import './styles/tokens.css';
+@import './styles/global.css';
+
+.placeholder-page {
+  max-width: 900px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.placeholder-page h2 {
+  margin: 0;
+  font-size: var(--text-3xl);
+}
+
+.placeholder-page p {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+}
