@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm install *)",
+      "Bash(npm ci)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npm run lint *)",
+      "Bash(npm run build *)",
+      "Bash(npm run start:dev *)",
+      "Bash(npm run test:cov *)",
+      "Bash(npm run test:e2e *)",
+
+      "Bash(npx prisma generate *)",
+      "Bash(npx prisma migrate dev *)",
+      "Bash(npx prisma migrate deploy *)",
+      "Bash(npx prisma migrate status *)",
+      "Bash(npx prisma studio *)",
+      "Bash(npx prisma format *)",
+      "Bash(npx prisma validate *)",
+      "Bash(npx tsc *)",
+      "Bash(npx vite *)",
+      "Bash(npx jest *)",
+
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git checkout -b *)",
+      "Bash(git switch -c *)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+
+      "Bash(mkdir *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(grep *)",
+      "Bash(find * -type f)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git checkout main)",
+      "Bash(git checkout develop)",
+      "Bash(npx prisma migrate reset *)",
+      "Bash(npx prisma db push *)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git branch -D *)",
+      "Bash(rm -rf *)",
+      "Bash(npx prisma migrate reset --force *)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Write(**/.env)"
+    ]
+  }
+}
