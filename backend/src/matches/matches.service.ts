@@ -85,7 +85,21 @@ export class MatchesService {
 
     if (matchDateOnly < phaseStart || matchDateOnly > phaseEnd) {
       throw new BadRequestException(
-        `No se puede crear el partido porque la fecha ${matchDateOnly} está fuera del período de la fase "${phase.name}" (${phaseStart} al ${phaseEnd})`,
+        `La fecha del partido ${matchDateOnly} está fuera del período de la fase "${phase.name}" (${phaseStart} al ${phaseEnd})`,
+      );
+    }
+  }
+
+  private validateAttendance(
+    attendance: number,
+    stadium: {
+      name: string;
+      capacity: number;
+    },
+  ) {
+    if (attendance > stadium.capacity) {
+      throw new BadRequestException(
+        `La audiencia (${attendance}) no puede superar la capacidad del estadio "${stadium.name}" (${stadium.capacity})`,
       );
     }
   }
@@ -150,6 +164,7 @@ export class MatchesService {
     );
 
     this.validateMatchDateInPhase(matchDate, phase);
+    this.validateAttendance(data.attendance, stadium);
 
     try {
       const createdMatch =
@@ -289,6 +304,12 @@ export class MatchesService {
         : currentMatch.match_date;
 
     this.validateMatchDateInPhase(matchDate, phase);
+    this.validateAttendance(
+      data.attendance !== undefined
+        ? data.attendance
+        : currentMatch.attendance,
+      stadium,
+    );
 
     try {
       const updatedMatch =
