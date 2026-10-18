@@ -1,0 +1,85 @@
+.phase-qualification {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.phase-qualification-header h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-xl);
+}
+
+.phase-qualification-header p {
+  max-width: 72ch;
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.phase-qualification-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 340px), 1fr)
+  );
+  gap: var(--space-4);
+}
+
+.phase-qualification-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.phase-qualification-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.phase-qualification-card-header h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-lg);
+}
+
+.phase-qualification-card .data-table th,
+.phase-qualification-card .data-table td {
+  padding: 8px 12px;
+}
+
+.phase-qualification-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.phase-qualification-note.is-waiting {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.phase-qualification-tie {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.phase-qualification-tie.is-open {
+  background: var(--color-warning-bg);
+}
+
+.phase-qualification-tie p {
+  margin: 0;
+}
+
+.phase-qualification-tie ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsInt,
   IsOptional,
   Min,
@@ -44,4 +45,9 @@ export class UpdateMatchDto {
   @IsInt()
   @Min(0)
   attendance?: number;
+
+  /** Partido de una serie de desempate del corte (regla 8/4/2). */
+  @IsOptional()
+  @IsBoolean()
+  tiebreaker?: boolean;
 }

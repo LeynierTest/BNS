@@ -168,6 +168,29 @@ Piezas transversales (no repetir su lógica en cada módulo):
 - Posiciones de peloteros: lista canónica en `players/player-positions.ts`,
   igual a la de `PlayerForm`; `isPitcherPosition` replica la regla del trigger
   `validate_player_stats`.
+- **Regla 8/4/2 (equipos activos por fase)** — decisiones del equipo
+  (2026-10-18):
+  - Las fases son exactamente las del enunciado, una vez cada una y en orden
+    cronológico: `phases/series-phases.ts` (`SERIES_PHASES`), espejo en
+    `frontend/src/types/phase.ts`. En la base: `phase_name_uq` y
+    `phase_name_ck` (`NOT VALID`: no rechaza filas antiguas, pero sí que se
+    modifiquen sin pasar a un nombre válido).
+  - Primera Ronda la juegan todos los equipos; Segunda Ronda, Play Off y
+    Final, los 8, 4 y 2 con más puntos **de la fase anterior** (1 por
+    victoria, sin contar desempates).
+  - Empate en el corte: series de desempate de 3 partidos a ganar 2 entre
+    los empatados (`match.tiebreaker`). Con más de dos empatados, el que
+    pierde una serie queda fuera hasta que quedan tantos como plazas. La
+    fase siguiente queda bloqueada mientras el corte no esté decidido. La
+    tabla general (reporte 1) sí cuenta los desempates como victorias.
+  - Los partidos de un equipo eliminado se rechazan (no solo se marcan).
+  - Algoritmo puro y especificado en `qualification/series-qualification.ts`.
+    Toda escritura que pueda alterarlo (partidos, fases, equipos) pasa por
+    `QualificationService.runConsistentWrite`: transacción con
+    `pg_advisory_xact_lock`, simula el cambio y lo rechaza (400) si deja
+    inválido algún partido. Las violaciones previas a la regla (datos
+    antiguos) no bloquean otros cambios. `GET /qualification` expone el
+    estado por fase.
 
 ## Arquitectura frontend — patrón obligatorio por módulo
 
@@ -197,6 +220,10 @@ Piezas transversales (no repetir su lógica en cada módulo):
   props → estado con effects (borraban lo editado al re-renderizar el padre).
 - Fechas `DATE` del backend: formatear cortando `YYYY-MM-DD` o con
   `timeZone: 'UTC'`; en hora local (America/Havana, UTC-4) salen un día antes.
+- Regla 8/4/2 en la interfaz: `components/ui/match-form-rules.ts` replica la
+  validación del backend para `MatchForm` (funciones puras que devuelven
+  clave de traducción + valores); `PhaseQualificationPanel` (en
+  `PhasesPage`) muestra el estado de `GET /qualification`.
 
 ## Arranque local completo
 
@@ -272,7 +299,7 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 71 pruebas unitarias y 67 e2e.
+  pasan `oxlint` sin warnings; backend con 93 pruebas unitarias y 85 e2e.
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).
 - Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para
@@ -284,9 +311,12 @@ Notas de arranque:
   (`UPDATE _prisma_migrations SET checksum = '<sha256 del archivo>' WHERE
   migration_name = '00000000000000_baseline';`). Si esa base se restauró con
   `psql` usando el archivo antiguo, los roles 1/2 no se sembraron: comprobarlo.
-- **Pendiente de decisión**: la regla de equipos activos por fase (8/4/2) no
-  está implementada en ningún sitio; requiere decidir cómo se identifica cada
-  fase, qué puntos deciden el corte y cómo se desempata.
+- Migración `20261018120000_add_phase_qualification`: falla en
+  `phase_name_uq` si la base tiene dos fases con el mismo nombre (sin dejar
+  nada aplicado). Corregir el dato y ejecutar `npx prisma migrate resolve
+  --rolled-back 20261018120000_add_phase_qualification` y `npx prisma migrate
+  deploy`. Las fases antiguas con un nombre libre siguen ahí, pero la regla
+  8/4/2 las ignora y no se pueden editar sin renombrarlas a una de la lista.
 - Reporte "Equipo todos estrellas": el sistema trata el "promedio" como
   promedio de bateo en [0, 1] para todas las posiciones y elige el mayor. El
   enunciado no define la fórmula; si para lanzadores debe usarse otra métrica

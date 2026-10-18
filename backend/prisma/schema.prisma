@@ -35,6 +35,7 @@ model match {
   away_score                    Int
   home_score                    Int
   attendance                    Int
+  tiebreaker                    Boolean  @default(false)
   team_match_away_team_idToteam team     @relation("match_away_team_idToteam", fields: [away_team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "match_away_team_fk")
   team_match_home_team_idToteam team     @relation("match_home_team_idToteam", fields: [home_team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "match_home_team_fk")
   phase                         phase    @relation(fields: [phase_id], references: [phase_id], onDelete: NoAction, onUpdate: NoAction, map: "match_phase_fk")
@@ -44,7 +45,7 @@ model match {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model phase {
   phase_id   Int      @id @default(autoincrement())
-  name       String   @db.VarChar(50)
+  name       String   @unique(map: "phase_name_uq") @db.VarChar(50)
   start_date DateTime @db.Date
   end_date   DateTime @db.Date
   match      match[]

@@ -265,6 +265,13 @@ export const resources = {
         visitorScore: 'Carreras visitante',
         homeScore: 'Carreras local',
         audience: 'Audiencia',
+        tiebreaker: 'Partido de desempate',
+        tiebreakerHint:
+          'Forma parte de una serie de desempate del corte de esta fase (3 partidos a ganar 2).',
+        tiebreakerBadge: 'Desempate',
+        notActive: 'no activo',
+        activeTeamsHint_one: '{{count}} equipo activo en esta fase.',
+        activeTeamsHint_other: '{{count}} equipos activos en esta fase.',
         teams: 'Equipos',
         score: 'Marcador',
         search: 'Buscar',
@@ -320,6 +327,26 @@ export const resources = {
             'La fecha debe estar dentro del período de la fase {{phase}} ({{start}} al {{end}}).',
           audienceExceedsCapacity:
             'La audiencia no puede superar la capacidad del estadio ({{capacity}}).',
+          missingPreviousPhase:
+            'No se pueden registrar partidos de {{phase}}: antes debe crearse la fase {{previous}}.',
+          previousPhaseUndecided:
+            'No se pueden registrar partidos de {{phase}}: todavía no se sabe qué equipos clasifican de {{previous}}.',
+          previousCutTied:
+            'No se pueden registrar partidos de {{phase}}: el corte de {{previous}} está empatado entre {{teams}} y se decide con series de desempate de 3 partidos a ganar 2.',
+          teamNotActive_one:
+            '{{teams}} no está activo en {{phase}}: no clasificó en la fase anterior.',
+          teamNotActive_other:
+            '{{teams}} no están activos en {{phase}}: no clasificaron en la fase anterior.',
+          noTieToBreak:
+            'No hay empate en el corte de {{phase}} que desempatar.',
+          tiebreakAlreadyResolved:
+            'El desempate del corte de {{phase}} ya está resuelto.',
+          phaseWithoutCut:
+            'La fase {{phase}} no tiene corte, así que no admite partidos de desempate.',
+          tiebreakerTeamsNotContenders:
+            'Solo pueden jugar el desempate los equipos empatados en el corte que no hayan perdido una serie: {{teams}}.',
+          tiebreakerDraw:
+            'Un partido de desempate no puede terminar empatado.',
         },
       },
 
@@ -352,13 +379,64 @@ export const resources = {
         deleteTitle: 'Eliminar fase',
         deleteDescription:
           '¿Estás seguro de que deseas eliminar esta fase? Esta acción no se puede deshacer.',
+        selectName: 'Selecciona una fase',
+        legacyNameHint:
+          'El nombre actual ({{name}}) no es una fase de la Serie; elige uno de la lista.',
         validation: {
           nameRequired: 'El nombre de la fase es obligatorio.',
           startDateRequired: 'La fecha de inicio es obligatoria.',
           endDateRequired: 'La fecha de fin es obligatoria.',
           endDateBeforeStart:
             'La fecha de fin no puede ser anterior a la fecha de inicio.',
+          nameTaken: 'Ya existe la fase {{phase}}.',
+          mustStartAfter:
+            'La fase {{phase}} debe comenzar después de que termine {{previous}} ({{date}}).',
+          mustEndBefore:
+            'La fase {{phase}} debe terminar antes de que comience {{next}} ({{date}}).',
         },
+      },
+
+      qualification: {
+        title: 'Equipos activos por fase',
+        description:
+          'Primera Ronda la juegan todos los equipos. A Segunda Ronda, Play Off y Final pasan los 8, 4 y 2 con más puntos (victorias) de la fase anterior; un empate en el corte se decide con series de 3 partidos a ganar 2.',
+        allTeams: 'Todos los equipos',
+        activeTeams_one: '{{count}} equipo activo',
+        activeTeams_other: '{{count}} equipos activos',
+        notCreated: 'Esta fase aún no está creada.',
+        participants: 'La jugarán: {{teams}}.',
+        team: 'Equipo',
+        games: 'PJ',
+        points: 'Pts',
+        status: 'Estado',
+        teamStatus: {
+          qualified: 'Clasifica',
+          tied: 'En desempate',
+          out: 'Fuera',
+        },
+        blocked: {
+          missingPreviousPhase:
+            'Se habilita cuando exista la fase {{previous}}.',
+          previousPhaseUndecided:
+            'Se habilita cuando se sepa qué equipos clasifican de {{previous}}.',
+          previousCutTied:
+            'Se habilita cuando se resuelva el empate en el corte de {{previous}}.',
+        },
+        undecided_one:
+          'Aún no hay partidos: el clasificado se conocerá al jugarse la fase.',
+        undecided_other:
+          'Aún no hay partidos: los {{count}} clasificados se conocerán al jugarse la fase.',
+        tieOpen_one:
+          'Empate en el corte: {{teams}} ({{points}}) se disputan {{count}} plaza en series de 3 partidos a ganar 2.',
+        tieOpen_other:
+          'Empate en el corte: {{teams}} ({{points}}) se disputan {{count}} plazas en series de 3 partidos a ganar 2.',
+        tieResolved_one:
+          'Empate en el corte resuelto con series de desempate: pasa {{teams}}.',
+        tieResolved_other:
+          'Empate en el corte resuelto con series de desempate: pasan {{teams}}.',
+        pointsLabel_one: '{{count}} punto',
+        pointsLabel_other: '{{count}} puntos',
+        loadError: 'No se pudo cargar la clasificación por fases.',
       },
 
       coaches: {
@@ -1091,6 +1169,13 @@ export const resources = {
         visitorScore: 'Visitor runs',
         homeScore: 'Home runs',
         audience: 'Attendance',
+        tiebreaker: 'Tiebreaker game',
+        tiebreakerHint:
+          'Part of a tiebreaker series for this phase cut (best of three).',
+        tiebreakerBadge: 'Tiebreaker',
+        notActive: 'not active',
+        activeTeamsHint_one: '{{count}} active team in this phase.',
+        activeTeamsHint_other: '{{count}} active teams in this phase.',
         teams: 'Teams',
         score: 'Score',
         search: 'Search',
@@ -1146,6 +1231,26 @@ export const resources = {
             'The date must be within the {{phase}} phase period ({{start}} to {{end}}).',
           audienceExceedsCapacity:
             'Attendance cannot exceed the stadium capacity ({{capacity}}).',
+          missingPreviousPhase:
+            'Games of {{phase}} cannot be recorded: the {{previous}} phase must be created first.',
+          previousPhaseUndecided:
+            'Games of {{phase}} cannot be recorded: it is not known yet which teams qualify from {{previous}}.',
+          previousCutTied:
+            'Games of {{phase}} cannot be recorded: the {{previous}} cut is tied between {{teams}} and is decided by best-of-three tiebreaker series.',
+          teamNotActive_one:
+            '{{teams}} is not active in {{phase}}: it did not qualify in the previous phase.',
+          teamNotActive_other:
+            '{{teams}} are not active in {{phase}}: they did not qualify in the previous phase.',
+          noTieToBreak:
+            'There is no tie at the {{phase}} cut to break.',
+          tiebreakAlreadyResolved:
+            'The tiebreaker for the {{phase}} cut is already resolved.',
+          phaseWithoutCut:
+            'The {{phase}} phase has no cut, so it does not allow tiebreaker games.',
+          tiebreakerTeamsNotContenders:
+            'Only teams tied at the cut that have not lost a series can play the tiebreaker: {{teams}}.',
+          tiebreakerDraw:
+            'A tiebreaker game cannot end in a draw.',
         },
       },
 
@@ -1178,13 +1283,64 @@ export const resources = {
         deleteTitle: 'Delete phase',
         deleteDescription:
           'Are you sure you want to delete this phase? This action cannot be undone.',
+        selectName: 'Select a phase',
+        legacyNameHint:
+          'The current name ({{name}}) is not a Series phase; choose one from the list.',
         validation: {
           nameRequired: 'The phase name is required.',
           startDateRequired: 'The start date is required.',
           endDateRequired: 'The end date is required.',
           endDateBeforeStart:
             'The end date cannot be earlier than the start date.',
+          nameTaken: 'The {{phase}} phase already exists.',
+          mustStartAfter:
+            'The {{phase}} phase must start after {{previous}} ends ({{date}}).',
+          mustEndBefore:
+            'The {{phase}} phase must end before {{next}} starts ({{date}}).',
         },
+      },
+
+      qualification: {
+        title: 'Active teams by phase',
+        description:
+          'Every team plays the Primera Ronda. The 8, 4 and 2 teams with the most points (wins) in the previous phase move on to Segunda Ronda, Play Off and Final; a tie at the cut is decided by best-of-three series.',
+        allTeams: 'All teams',
+        activeTeams_one: '{{count}} active team',
+        activeTeams_other: '{{count}} active teams',
+        notCreated: 'This phase has not been created yet.',
+        participants: 'It will be played by: {{teams}}.',
+        team: 'Team',
+        games: 'GP',
+        points: 'Pts',
+        status: 'Status',
+        teamStatus: {
+          qualified: 'Qualifies',
+          tied: 'In tiebreaker',
+          out: 'Out',
+        },
+        blocked: {
+          missingPreviousPhase:
+            'Available once the {{previous}} phase exists.',
+          previousPhaseUndecided:
+            'Available once it is known which teams qualify from {{previous}}.',
+          previousCutTied:
+            'Available once the tie at the {{previous}} cut is resolved.',
+        },
+        undecided_one:
+          'No games yet: the qualified team will be known once the phase is played.',
+        undecided_other:
+          'No games yet: the {{count}} qualified teams will be known once the phase is played.',
+        tieOpen_one:
+          'Tie at the cut: {{teams}} ({{points}}) compete for {{count}} spot in best-of-three series.',
+        tieOpen_other:
+          'Tie at the cut: {{teams}} ({{points}}) compete for {{count}} spots in best-of-three series.',
+        tieResolved_one:
+          'Tie at the cut resolved by tiebreaker series: {{teams}} moves on.',
+        tieResolved_other:
+          'Tie at the cut resolved by tiebreaker series: {{teams}} move on.',
+        pointsLabel_one: '{{count}} point',
+        pointsLabel_other: '{{count}} points',
+        loadError: 'The phase qualification could not be loaded.',
       },
 
       coaches: {

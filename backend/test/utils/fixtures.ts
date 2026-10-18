@@ -77,9 +77,14 @@ export function createMatch(
     away_score: number;
     home_score: number;
     attendance: number;
+    tiebreaker?: boolean;
   },
 ) {
-  return created<{ match_id: number }>(agent, '/matches', match);
+  return created<{ match_id: number; tiebreaker: boolean }>(
+    agent,
+    '/matches',
+    match,
+  );
 }
 
 export function createCoach(

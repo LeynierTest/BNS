@@ -19,6 +19,7 @@ import { UsersModule } from './users/users.module';
 import { ReportsModule } from './reports/reports.module';
 import { MailModule } from './mail/mail.module';
 import { DashboardEventsModule } from './dashboard-events/dashboard-events.module';
+import { QualificationModule } from './qualification/qualification.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DashboardEventsModule } from './dashboard-events/dashboard-events.modul
     PlayersModule,
     MatchesModule,
     PhasesModule,
+    QualificationModule,
     TopCoachesModule,
     CoachesModule,
     StandingsModule,
