@@ -9,6 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsBaseballInnings } from '../innings-pitched';
 import { PLAYER_POSITIONS } from '../player-positions';
 
 export class CreatePlayerDto {
@@ -42,9 +43,9 @@ export class CreatePlayerDto {
   at_bats: number | null;
 
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(9999.99)
+  @IsNumber()
+  @Max(9999.2)
+  @IsBaseballInnings()
   innings_pitched: number | null;
 
   @IsOptional()
@@ -57,8 +58,37 @@ export class CreatePlayerDto {
   @Min(0)
   runs_allowed: number | null;
 
+  // Promedio de bateo: solo para quienes no son lanzadores (el promedio
+  // del lanzador es su ERA, que se calcula).
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
   @Max(1)
-  batting_average: number;
+  batting_average?: number | null;
+
+  // Estadísticas solo de lanzador (WHIP, K/9, BB/9 y FIP).
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  hits_allowed?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  walks_allowed?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  strikeouts?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  home_runs_allowed?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  hit_batsmen?: number | null;
 }

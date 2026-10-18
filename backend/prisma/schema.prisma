@@ -60,6 +60,11 @@ model player {
   hits            Int?
   runs_allowed    Int?
   batting_average Decimal?    @db.Decimal(5, 3)
+  hits_allowed      Int?
+  walks_allowed     Int?
+  strikeouts        Int?
+  home_runs_allowed Int?
+  hit_batsmen       Int?
   team_member     team_member @relation(fields: [team_member_id], references: [team_member_id], onDelete: Cascade, onUpdate: NoAction, map: "player_team_member_fk")
 }
 

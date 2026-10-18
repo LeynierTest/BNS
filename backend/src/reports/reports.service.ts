@@ -314,17 +314,48 @@ export class ReportsService {
     const data = await this.allStarTeamService.getAllStarTeam();
     const doc = this.createDocument('Equipo Todos Estrellas');
 
+    // Promedio: de bateo para cada posición y ERA para el lanzador.
     this.addTable(
       doc,
-      ['Posición', 'Jugador', 'Equipo', 'Promedio de Bateo'],
+      ['Posición', 'Jugador', 'Equipo', 'Promedio'],
       data.map((item) => [
         item.player_position,
         item.player_name,
         item.team_name,
-        item.batting_average.toFixed(3),
+        item.pitching
+          ? `${item.pitching.era.toFixed(2)} (ERA)`
+          : (item.batting_average?.toFixed(3) ?? '—'),
       ]),
       [110, 200, 150, 100],
     );
+
+    const pitchers = data.filter((item) => item.pitching !== null);
+
+    if (pitchers.length > 0) {
+      const formatStat = (value: number | null) =>
+        value === null ? '—' : value.toFixed(2);
+
+      doc.moveDown(1);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .text('Estadísticas del lanzador', doc.page.margins.left);
+      doc.moveDown(0.5);
+
+      this.addTable(
+        doc,
+        ['Lanzador', 'ERA', 'WHIP', 'K/9', 'BB/9', 'FIP'],
+        pitchers.map(({ player_name, pitching }) => [
+          player_name,
+          formatStat(pitching?.era ?? null),
+          formatStat(pitching?.whip ?? null),
+          formatStat(pitching?.k_per_9 ?? null),
+          formatStat(pitching?.bb_per_9 ?? null),
+          formatStat(pitching?.fip ?? null),
+        ]),
+        [160, 70, 70, 70, 70, 70],
+      );
+    }
 
     return this.finish(doc);
   }
