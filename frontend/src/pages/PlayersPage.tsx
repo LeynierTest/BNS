@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -51,6 +51,7 @@ export default function PlayersPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadCount, setReloadCount] = useState(0);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -66,40 +67,59 @@ export default function PlayersPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const playersPromise = getPlayers();
-
-      const [playerData, teamData] = await Promise.all([
-        playersPromise,
-        isAdministrator ? getTeams() : Promise.resolve([]),
-      ]);
-
-      setPlayers(playerData);
-      setTeams(teamData);
-    } catch (err) {
-      setError(getApiErrorMessage(err, t('players.loadError')));
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdministrator, t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        const playersPromise = getPlayers();
+
+        const [playerData, teamData] = await Promise.all([
+          playersPromise,
+          isAdministrator ? getTeams() : Promise.resolve([]),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        setPlayers(playerData);
+        setTeams(teamData);
+        setError('');
+      } catch (err) {
+        if (!ignore) {
+          setError(getApiErrorMessage(err, t('players.loadError')));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadData();
-  }, [loadData]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, isAdministrator, t]);
 
   useEffect(() => {
     const disconnect = connectPlayersEvents({
       onEvent: () => {
-        void loadData();
+        setReloadCount((count) => count + 1);
       },
     });
 
     return disconnect;
-  }, [loadData]);
+  }, []);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setError('');
+    setReloadCount((count) => count + 1);
+  };
 
   const hasActiveFilters =
     numberFilter.trim() !== '' ||
@@ -452,7 +472,7 @@ export default function PlayersPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => void loadData()}
+            onClick={retryLoad}
           >
             {t('common.retry')}
           </Button>
