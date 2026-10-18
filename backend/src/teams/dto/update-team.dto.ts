@@ -3,6 +3,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -10,11 +11,13 @@ export class UpdateTeamDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   province?: string;
 
   @IsOptional()
@@ -30,10 +33,12 @@ export class UpdateTeamDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   mascot?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(50)
   color?: string;
 }

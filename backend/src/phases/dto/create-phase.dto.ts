@@ -1,9 +1,9 @@
 import {
-  IsDateString,
   IsNotEmpty,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export class CreatePhaseDto {
   @IsString()
@@ -11,9 +11,9 @@ export class CreatePhaseDto {
   @MaxLength(50)
   name: string;
 
-  @IsDateString()
+  @IsDateOnly()
   start_date: string;
 
-  @IsDateString()
+  @IsDateOnly()
   end_date: string;
 }

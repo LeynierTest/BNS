@@ -9,12 +9,14 @@ import {
   Post,
   Query,
   Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import type {
   AuthenticatedRequest,
 } from '../auth/guards/jwt-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SearchUsersQueryDto } from './dto/search-users-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
@@ -32,17 +34,12 @@ export class UsersController {
 
   @Roles('Administrator')
   @Get('search')
-  async search(
-    @Query('username') username?: string,
-    @Query('email') email?: string,
-    @Query('role') role?: string,
-    @Query('active') active?: string,
-  ) {
+  async search(@Query() query: SearchUsersQueryDto) {
     return this.usersService.searchUsers(
-      username,
-      email,
-      role,
-      active !== undefined ? active === 'true' : undefined,
+      query.username,
+      query.email,
+      query.role,
+      query.active,
     );
   }
 
@@ -71,7 +68,9 @@ export class UsersController {
     const requesterId = request.user?.sub;
 
     if (!requesterId) {
-      throw new Error('Usuario autenticado no identificado');
+      throw new UnauthorizedException(
+        'Usuario autenticado no identificado',
+      );
     }
 
     return this.usersService.deleteUser(
@@ -90,7 +89,9 @@ export class UsersController {
     const requesterId = request.user?.sub;
 
     if (!requesterId) {
-      throw new Error('Usuario autenticado no identificado');
+      throw new UnauthorizedException(
+        'Usuario autenticado no identificado',
+      );
     }
 
     return this.usersService.updateUser(

@@ -18,11 +18,14 @@ export interface MatchTeamOption {
 export interface MatchStadiumOption {
   stadium_id: number;
   name: string;
+  capacity: number;
 }
 
 export interface MatchPhaseOption {
   phase_id: number;
   name: string;
+  start_date: string;
+  end_date: string;
 }
 
 export interface MatchFormData {
@@ -136,6 +139,25 @@ export function MatchForm({
       return;
     }
 
+    const selectedPhase = phases.find(
+      (option) => option.phase_id === phase,
+    );
+
+    if (
+      selectedPhase &&
+      (matchDate < selectedPhase.start_date ||
+        matchDate > selectedPhase.end_date)
+    ) {
+      setValidationError(
+        t('matches.validation.dateOutsidePhase', {
+          phase: selectedPhase.name,
+          start: selectedPhase.start_date,
+          end: selectedPhase.end_date,
+        }),
+      );
+      return;
+    }
+
     if (
       !Number.isInteger(visitorRuns) ||
       visitorRuns < 0
@@ -157,6 +179,22 @@ export function MatchForm({
       attendance < 0
     ) {
       setValidationError(t('matches.validation.audienceInvalid'));
+      return;
+    }
+
+    const selectedStadium = stadiums.find(
+      (option) => option.stadium_id === stadium,
+    );
+
+    if (
+      selectedStadium &&
+      attendance > selectedStadium.capacity
+    ) {
+      setValidationError(
+        t('matches.validation.audienceExceedsCapacity', {
+          capacity: selectedStadium.capacity,
+        }),
+      );
       return;
     }
 

@@ -12,6 +12,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ParseDateOnlyPipe } from '../common/pipes/parse-date-only.pipe';
 import { MatchesService } from './matches.service';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
@@ -39,7 +40,8 @@ export class MatchesController {
   async search(
     @Query('away_team') awayTeam?: string,
     @Query('home_team') homeTeam?: string,
-    @Query('match_date') matchDate?: string,
+    @Query('match_date', new ParseDateOnlyPipe({ optional: true }))
+    matchDate?: string,
     @Query('stadium') stadium?: string,
     @Query('phase') phase?: string,
   ) {

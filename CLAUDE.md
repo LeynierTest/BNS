@@ -83,6 +83,9 @@ solo a features nuevas.
 
 ## Stack
 
+**Requisito**: Node.js `>=20.19` (recomendado 22 o 24 LTS). Con Node 18 fallan
+vite, oxlint, rolldown y Prisma 7.
+
 **Backend** (`backend/`)
 - NestJS 12 + TypeScript (strict)
 - Prisma 7 (`@prisma/adapter-pg`) sobre PostgreSQL — **sin** `@prisma/client`
@@ -139,6 +142,33 @@ Reglas al tocar o crear un módulo:
   `team_member_id`, etc.) — no renombrar a camelCase sin actualizar el schema
   y las migraciones.
 
+Piezas transversales (no repetir su lógica en cada módulo):
+- `src/app.setup.ts` (`configureApp`): cookies, estáticos, CORS y
+  `ValidationPipe` global. Lo usan `main.ts` **y** las pruebas e2e; cualquier
+  pipe, filtro o middleware global va aquí para que los tests lo ejerciten.
+- `src/common/`: `@IsDateOnly()` para fechas en DTOs y `ParseDateOnlyPipe`
+  para fechas en rutas/query. Toda fecha de negocio viaja como `YYYY-MM-DD`
+  (nunca `@IsDateString`, que acepta horas y fechas imposibles).
+- Query params: numéricos con `ParseIntPipe({ optional: true })`; booleanos u
+  otros casos con un DTO de query (el `ValidationPipe` global con
+  `transform: true` convierte los primitivos *antes* que las pipes de
+  parámetro, p. ej. cualquier texto distinto de `'true'` → `false`).
+- Errores de base de datos: `PrismaExceptionFilter` (global, en `PrismaModule`)
+  traduce P2000/P2020 → 400, P2002/P2003 → 409, P2025 → 404 y las excepciones
+  de triggers (`P0001`) → 400 con su mensaje. Es la red de seguridad para
+  carreras y límites de tipo: los servicios siguen validando antes con
+  mensajes propios.
+- Seguridad: `OriginGuard` (primer `APP_GUARD`) exige que las mutaciones con
+  cookie de sesión vengan de un origen de `FRONTEND_ORIGIN` (CSRF);
+  `JwtAuthGuard` y `RolesGuard` son globales, así que todo endpoint exige
+  sesión salvo `@Public()`.
+- Invariante de usuarios: siempre debe quedar al menos un Administrator
+  activo (`UsersService.assertKeepsAnActiveAdministrator`, con bloqueo de
+  filas para operaciones concurrentes).
+- Posiciones de peloteros: lista canónica en `players/player-positions.ts`,
+  igual a la de `PlayerForm`; `isPitcherPosition` replica la regla del trigger
+  `validate_player_stats`.
+
 ## Arquitectura frontend — patrón obligatorio por módulo
 
 - `src/api/<entidad>.ts`: funciones tipadas que llaman al backend vía
@@ -154,6 +184,19 @@ Reglas al tocar o crear un módulo:
 - Protección de rutas: toda página que requiera sesión o rol específico se
   envuelve con `ProtectedRoute` / `RoleProtectedRoute`, nunca con checks ad
   hoc dentro del componente.
+- Carga de datos en páginas: la petición vive **dentro** del `useEffect`, con
+  un flag `ignore` en el cleanup para descartar respuestas obsoletas
+  (recargas encadenadas, StrictMode, desmontaje). Las recargas (SSE, tras
+  guardar/borrar) incrementan un contador `reloadCount` que es dependencia del
+  effect; el reintento explícito pone `loading`/`error` en su propio handler.
+  Nunca `setState` síncrono dentro de un effect (`react/set-state-in-effect`).
+  Ver `PhasesPage.tsx` como referencia.
+- Formularios: el estado se inicializa desde las props en `useState` y el
+  padre pasa `key` por identidad de la entidad (p. ej.
+  `key={editingPhase?.phase_id ?? 'create-phase-form'}`); no sincronizar
+  props → estado con effects (borraban lo editado al re-renderizar el padre).
+- Fechas `DATE` del backend: formatear cortando `YYYY-MM-DD` o con
+  `timeZone: 'UTC'`; en hora local (America/Havana, UTC-4) salen un día antes.
 
 ## Arranque local completo
 
@@ -169,10 +212,10 @@ avisar qué variable falta y detenerse ahí — el usuario la completa en su
 cd backend
 npm install
 npx prisma migrate deploy   # crea/actualiza las tablas contra DATABASE_URL
-npx prisma generate         # genera el cliente tipado (requiere red hacia
-                             # binaries.prisma.sh; si falla por red, los
-                             # errores de tipo de PrismaService son falsos
-                             # positivos, no bugs reales)
+                             # (también siembra los roles 1 y 2)
+npx prisma generate         # genera el cliente tipado en
+                             # node_modules/@prisma/client (Prisma 7.10 no
+                             # necesitó red para esto)
 npm run start:dev           # queda sirviendo en http://localhost:3000
 
 # ── Seed del primer usuario administrador (una sola vez) ────
@@ -187,7 +230,11 @@ npm install
 npm run dev                 # queda sirviendo en http://localhost:5173
 
 # ── Lint / tests (cualquier terminal) ────────────────────────
-cd backend && npm run lint && npm run test && npm run test:e2e
+# Las e2e necesitan una base PROPIA (se vacía en cada ejecución); su nombre
+# debe contener "test" o "e2e" o la suite se niega a correr:
+createdb bns_test
+cd backend && npm run lint && npm run test
+TEST_DATABASE_URL="postgresql://<usuario>@localhost/bns_test" npm run test:e2e
 cd frontend && npm run lint && npm run build   # tsc -b && vite build
 ```
 
@@ -198,6 +245,18 @@ Notas de arranque:
   no son pasos secuenciales que terminan.
 - La subida de foto de perfil se guarda en `backend/uploads/` (se crea sola,
   ya está en `.gitignore`).
+- `FRONTEND_ORIGIN` (opcional, por defecto `http://localhost:5173`; admite
+  varios separados por comas) define el origen permitido para CORS y para las
+  mutaciones con cookie. Si el frontend se sirve en otra URL, hay que
+  definirla o las mutaciones responderán 403.
+- Si `backend/node_modules` quedó a medias (instalación interrumpida),
+  `npm install` no lo repara: hay que reinstalar desde cero (`npm ci` con un
+  lockfile sano, o apartar `node_modules` y reinstalar). Síntomas vistos:
+  `Cannot find package .../pathe/index.js` en `prisma generate` y
+  `Bus error (core dumped)` al lanzar jest (binario nativo truncado).
+- Los tests de jest deben lanzarse con los scripts de npm (`npm run test`,
+  `npm run test:e2e`): NestJS 12 es ESM y requiere
+  `node --experimental-vm-modules`; `npx jest` a secas falla.
 - **Nunca** escribir valores reales de `DATABASE_URL`, `JWT_SECRET`, `SMTP_*`,
   el hash del admin o cualquier credencial en este archivo, en commits, o en
   cualquier archivo trackeado por git — solo en `.env` local (ya gitignoreado
@@ -207,22 +266,32 @@ Notas de arranque:
 ## Estado conocido / cosas a verificar antes de "arreglar" nada
 
 - **El Prisma Client requiere generación local** (`npx prisma generate`) antes
-  de que `tsc` compile sin errores. En entornos sin acceso a
-  `binaries.prisma.sh` (como este sandbox), `tsc --noEmit` reporta decenas de
-  falsos positivos (`Property 'team' does not exist on type 'PrismaService'`,
-  `Module has no exported member 'Prisma'`, etc.). **No son bugs reales** —
-  antes de tocar algo que parezca un error de tipos en servicios de Prisma,
-  correr `npx prisma generate` y volver a chequear.
-- El frontend sí compila y tipa limpio (`tsc -b` sin errores).
-- `oxlint` en frontend reporta el mismo warning repetido en ~11 páginas/forms
-  (`react/set-state-in-effect`: se llama `setState` de forma síncrona dentro
-  de un `useEffect`). Es un patrón repetido, no un caso aislado — si se
-  corrige, conviene resolverlo de forma consistente en todos los archivos
-  afectados (`PhasesPage`, `MatchForm`, `CoachesPage`, `StadiumsPage`,
-  `DashboardPage`, `CoachForm`, `StadiumForm`, `TeamsPage`, `PhaseForm`,
-  `PlayersPage`, `UsersPage`, `MatchesPage`), siguiendo el mismo criterio en
-  todos (derivar el valor en el render o mover la actualización al evento que
-  la origina, según corresponda a cada caso).
+  de que `tsc` compile sin errores. Sin cliente generado, `tsc --noEmit`
+  reporta decenas de falsos positivos (`Property 'team' does not exist on type
+  'PrismaService'`, `Module has no exported member 'Prisma'`, etc.). **No son
+  bugs reales** — antes de tocar algo que parezca un error de tipos en
+  servicios de Prisma, correr `npx prisma generate` y volver a chequear.
+- Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
+  pasan `oxlint` sin warnings; backend con 71 pruebas unitarias y 67 e2e.
+  Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
+  patrón de carga de datos en la sección de arquitectura frontend).
+- Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para
+  Prisma (sin `\restrict`, sin `SET transaction_timeout`, sin vaciar
+  `search_path`, seed de roles con `OVERRIDING SYSTEM VALUE`). No regenerarlo
+  sin repetir esos ajustes. En bases donde se marcó como aplicado con la
+  versión antigua: `migrate deploy`/`status` funcionan igual; `migrate dev`
+  pedirá reset salvo que se actualice el checksum
+  (`UPDATE _prisma_migrations SET checksum = '<sha256 del archivo>' WHERE
+  migration_name = '00000000000000_baseline';`). Si esa base se restauró con
+  `psql` usando el archivo antiguo, los roles 1/2 no se sembraron: comprobarlo.
+- **Pendiente de decisión**: la regla de equipos activos por fase (8/4/2) no
+  está implementada en ningún sitio; requiere decidir cómo se identifica cada
+  fase, qué puntos deciden el corte y cómo se desempata.
+- Reporte "Equipo todos estrellas": el sistema trata el "promedio" como
+  promedio de bateo en [0, 1] para todas las posiciones y elige el mayor. El
+  enunciado no define la fórmula; si para lanzadores debe usarse otra métrica
+  (p. ej. carreras limpias, donde gana el menor), hay que cambiar
+  `get_all_star_team()` con una migración nueva.
 - `backend/.oxlintrc.json` tiene `typescript/no-floating-promises: error` —
   cualquier promesa sin `await`/`.catch()` debe tratarse como error de lint,
   no ignorarse.

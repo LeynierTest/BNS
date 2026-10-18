@@ -187,6 +187,7 @@ export function TeamForm({
       <div className="team-form-grid">
         <Input
           label={t('teams.form.name')}
+          maxLength={100}
           value={values.name}
           onChange={(event) =>
             updateField(
@@ -202,6 +203,7 @@ export function TeamForm({
 
         <Input
           label={t('teams.form.province')}
+          maxLength={100}
           value={values.province}
           onChange={(event) =>
             updateField(
@@ -261,6 +263,7 @@ export function TeamForm({
 
         <Input
           label={t('teams.form.mascot')}
+          maxLength={100}
           value={values.mascot}
           onChange={(event) =>
             updateField(
@@ -276,6 +279,7 @@ export function TeamForm({
 
         <Input
           label={t('teams.form.color')}
+          maxLength={50}
           value={values.color}
           onChange={(event) =>
             updateField(

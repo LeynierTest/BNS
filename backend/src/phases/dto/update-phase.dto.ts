@@ -1,10 +1,10 @@
 import {
-  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export class UpdatePhaseDto {
   @IsOptional()
@@ -14,10 +14,10 @@ export class UpdatePhaseDto {
   name?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateOnly()
   start_date?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateOnly()
   end_date?: string;
 }

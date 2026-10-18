@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 export class UpdateUserDto {
@@ -23,6 +24,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MinLength(6)
   @MaxLength(128)
   password?: string;
 

@@ -581,6 +581,7 @@ export default function UsersPage() {
 
           <Input
             label={t('users.username')}
+            maxLength={50}
             value={form.username}
             onChange={(event) =>
               updateField(
@@ -595,6 +596,7 @@ export default function UsersPage() {
 
           <Input
             label={t('users.email')}
+            maxLength={150}
             type="email"
             value={form.email}
             onChange={(event) =>
@@ -614,6 +616,7 @@ export default function UsersPage() {
                 : t('users.password')
             }
             type="password"
+            maxLength={128}
             value={form.password}
             onChange={(event) =>
               updateField(

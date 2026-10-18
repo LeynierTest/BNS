@@ -115,6 +115,7 @@ export default function StadiumForm({
       <div className="stadium-form-grid">
         <Input
           label={t('stadiums.form.name')}
+          maxLength={150}
           value={values.name}
           onChange={(event) =>
             updateField('name', event.target.value)
@@ -148,6 +149,7 @@ export default function StadiumForm({
 
         <Input
           label={t('stadiums.form.province')}
+          maxLength={100}
           value={values.province}
           onChange={(event) =>
             updateField(

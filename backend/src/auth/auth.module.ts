@@ -6,6 +6,7 @@ import { StorageModule } from '../storage/storage.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OriginGuard } from './guards/origin.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 @Module({
@@ -36,6 +37,10 @@ import { RolesGuard } from './guards/roles.guard';
     AuthService,
     JwtAuthGuard,
     RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: OriginGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

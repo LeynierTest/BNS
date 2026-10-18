@@ -582,10 +582,13 @@ export default function MatchesPage() {
             stadium_id:
               stadium.stadium_id,
             name: stadium.name,
+            capacity: stadium.capacity,
           }))}
           phases={phases.map((phase) => ({
             phase_id: phase.phase_id,
             name: phase.name,
+            start_date: phase.start_date,
+            end_date: phase.end_date,
           }))}
           loading={formLoading}
           error={formError}

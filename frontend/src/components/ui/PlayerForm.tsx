@@ -256,6 +256,7 @@ export function PlayerForm({
       <div className="player-form-grid">
         <Input
           label={t('players.form.name')}
+          maxLength={150}
           value={values.name}
           onChange={(event) =>
             updateValue('name', event.target.value)

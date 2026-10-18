@@ -27,7 +27,11 @@ export class ReportsService {
       return String(date);
     }
 
-    return value.toLocaleDateString('es-ES');
+    // Las fechas de partido son columnas DATE (medianoche UTC) o cadenas
+    // YYYY-MM-DD, que JavaScript también interpreta como UTC. Formatear en
+    // la zona local del servidor (p. ej. America/Havana, UTC-4) mostraría
+    // el día anterior.
+    return value.toLocaleDateString('es-ES', { timeZone: 'UTC' });
   }
 
   private formatNumber(value: number | null | undefined): string {

@@ -1,8 +1,16 @@
+-- Baseline generado con pg_dump 18 y ajustado para que Prisma Migrate lo ejecute
+-- en una base nueva (PostgreSQL 16+):
+--   * sin los meta-comandos de psql \restrict / \unrestrict (no son SQL);
+--   * sin SET transaction_timeout (parámetro que solo existe desde PostgreSQL 17);
+--   * sin vaciar search_path, para que el seed de roles y las migraciones
+--     siguientes resuelvan el esquema public;
+--   * seed de roles con OVERRIDING SYSTEM VALUE (role_id es GENERATED ALWAYS).
+-- No regenerar este archivo con pg_dump sin repetir estos ajustes.
+
 --
 -- PostgreSQL database dump
 --
 
-\restrict aj4Ki7BOMLGVztUHP2MZnkzfTVd04MdWWNh4ij0G2zNvrV7LK33pYivXJ9wK9Bb
 
 -- Dumped from database version 18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)
 -- Dumped by pg_dump version 18.6 (Ubuntu 18.6-0ubuntu0.26.04.1)
@@ -10,10 +18,8 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
 SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
@@ -871,10 +877,15 @@ ALTER TABLE ONLY public.team_member
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aj4Ki7BOMLGVztUHP2MZnkzfTVd04MdWWNh4ij0G2zNvrV7LK33pYivXJ9wK9Bb
 
-INSERT INTO role (role_id, name)
+INSERT INTO public.role (role_id, name)
+OVERRIDING SYSTEM VALUE
 VALUES
     (1, 'Administrator'),
     (2, 'User')
 ON CONFLICT (role_id) DO NOTHING;
+
+SELECT pg_catalog.setval(
+    pg_catalog.pg_get_serial_sequence('public.role', 'role_id'),
+    (SELECT MAX(role_id) FROM public.role)
+);
