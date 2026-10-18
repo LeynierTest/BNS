@@ -1,8 +1,8 @@
 import {
-  IsDateString,
   IsInt,
   Min,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export class CreateMatchDto {
   @IsInt()
@@ -13,7 +13,7 @@ export class CreateMatchDto {
   @Min(1)
   home_team_id: number;
 
-  @IsDateString()
+  @IsDateOnly()
   match_date: string;
 
   @IsInt()

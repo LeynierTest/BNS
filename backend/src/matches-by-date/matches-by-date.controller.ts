@@ -5,6 +5,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
+import { ParseDateOnlyPipe } from '../common/pipes/parse-date-only.pipe';
 import { MatchesByDateService } from './matches-by-date.service';
 
 @Controller('matches')
@@ -15,7 +16,7 @@ export class MatchesByDateController {
 
   @Get('by-date/:date')
   async getMatchesByDate(
-    @Param('date') date: string,
+    @Param('date', new ParseDateOnlyPipe()) date: string,
     @Query('stadiumId', new ParseIntPipe({ optional: true }))
     stadiumId?: number,
   ) {

@@ -1,11 +1,11 @@
 import { Type } from 'class-transformer';
 import {
-  IsDateString,
   IsEmail,
   IsEnum,
   IsInt,
   IsOptional,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 
 export enum ReportType {
   STANDINGS = 'standings',
@@ -35,7 +35,7 @@ export class SendReportEmailDto {
   awayTeamId?: number;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateOnly()
   date?: string;
 
   @IsOptional()

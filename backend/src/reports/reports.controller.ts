@@ -8,6 +8,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { ParseDateOnlyPipe } from '../common/pipes/parse-date-only.pipe';
 import { ReportsService } from './reports.service';
 
 @Controller('reports/pdf')
@@ -52,13 +53,14 @@ export class ReportsController {
 
   @Get('matches-by-date/:date')
   async matchesByDate(
-    @Param('date') date: string,
-    @Query('stadiumId') stadiumId?: string,
+    @Param('date', new ParseDateOnlyPipe()) date: string,
+    @Query('stadiumId', new ParseIntPipe({ optional: true }))
+    stadiumId?: number,
     @Res({ passthrough: true }) response?: Response,
   ): Promise<StreamableFile> {
     const content = await this.reportsService.matchesByDatePdf(
       date,
-      stadiumId ? Number(stadiumId) : undefined,
+      stadiumId,
     );
 
     return this.pdf(

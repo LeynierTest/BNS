@@ -14,6 +14,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ParseDateOnlyPipe } from '../common/pipes/parse-date-only.pipe';
 import { PhasesService } from './phases.service';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
@@ -33,7 +34,8 @@ export class PhasesController {
   @Get('search')
   async search(
     @Query('name') name?: string,
-    @Query('active_date') activeDate?: string,
+    @Query('active_date', new ParseDateOnlyPipe({ optional: true }))
+    activeDate?: string,
   ) {
     return this.phasesService.searchPhases(
       name,
