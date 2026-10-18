@@ -106,7 +106,10 @@ vite, oxlint, rolldown y Prisma 7.
 - i18n: `i18next` / `react-i18next` (`src/i18n/`)
 - Estilos: CSS plano por componente (`Component.tsx` + `Component.css`
   co-ubicados), tokens globales en `src/styles/tokens.css`
-- Lint: `oxlint` (plugins `react`, `typescript`, `oxc`)
+- Lint: `oxlint` (plugins `react`, `typescript`, `oxc`) · Tests: Vitest 4.1
+  + happy-dom + Testing Library (`npm test`, archivos `src/**/*.test.ts(x)`;
+  `src/test/render-as.tsx` monta un componente con sesión de Administrator o
+  User). Vitest 5 exigiría Node 22: no subirlo sin subir el mínimo de Node.
 
 ## Arquitectura backend — patrón obligatorio por módulo
 
@@ -162,6 +165,13 @@ Piezas transversales (no repetir su lógica en cada módulo):
   cookie de sesión vengan de un origen de `FRONTEND_ORIGIN` (CSRF);
   `JwtAuthGuard` y `RolesGuard` son globales, así que todo endpoint exige
   sesión salvo `@Public()`.
+- Límites de intentos (`common/rate-limit/fixed-window-limiter.ts`, en
+  memoria; con varias instancias del backend haría falta un almacén
+  compartido): el login se bloquea (429, incluso con la contraseña correcta)
+  tras 5 fallos por usuario e IP o 30 por IP en 15 minutos; cada usuario
+  puede pedir 5 reportes por correo cada 10 minutos.
+- Reportes por correo: un User solo puede enviarlos a su propio correo (403
+  si pide otro, y es el destino por defecto); un Administrator, a cualquiera.
 - Invariante de usuarios: siempre debe quedar al menos un Administrator
   activo (`UsersService.assertKeepsAnActiveAdministrator`, con bloqueo de
   filas para operaciones concurrentes).
@@ -184,6 +194,12 @@ Piezas transversales (no repetir su lógica en cada módulo):
     estadísticas son informativas. Sin entradas, o con una fila antigua en
     décimas, no hay estadísticas y el lanzador no compite. No hay mínimo de
     entradas: un lanzador con pocas entradas y ERA bajo puede ganar.
+- Promedio de bateo: nunca se escribe. El trigger `compute_batting_average`
+  lo calcula en cada alta o edición como `round(hits / at_bats, 3)` (vacío sin
+  turnos al bate y en el lanzador); la API rechaza `batting_average` y exige
+  hits <= at_bats (también CHECK `player_hits_le_at_bats_ck`, `NOT VALID`).
+  `computeBattingAverage` (`frontend/src/types/player.ts`) es el espejo para
+  la vista previa del formulario.
 - **Regla 8/4/2 (equipos activos por fase)** — decisiones del equipo
   (2026-10-18):
   - Las fases son exactamente las del enunciado, una vez cada una y en orden
@@ -230,6 +246,11 @@ Piezas transversales (no repetir su lógica en cada módulo):
   effect; el reintento explícito pone `loading`/`error` en su propio handler.
   Nunca `setState` síncrono dentro de un effect (`react/set-state-in-effect`).
   Ver `PhasesPage.tsx` como referencia.
+- Búsquedas: la página guarda los filtros aplicados en `appliedFilters`
+  (null = lista completa), que también es dependencia del effect, así que
+  toda recarga repite la misma consulta; `hasSearched` se deriva de ahí.
+  Tras crear, editar o borrar se recarga (`reloadCount`) en vez de modificar
+  la lista a mano, y "Limpiar filtros" vuelve a pedir la lista completa.
 - Formularios: el estado se inicializa desde las props en `useState` y el
   padre pasa `key` por identidad de la entidad (p. ej.
   `key={editingPhase?.phase_id ?? 'create-phase-form'}`); no sincronizar
@@ -278,8 +299,13 @@ npm run dev                 # queda sirviendo en http://localhost:5173
 createdb bns_test
 cd backend && npm run lint && npm run test
 TEST_DATABASE_URL="postgresql://<usuario>@localhost/bns_test" npm run test:e2e
-cd frontend && npm run lint && npm run build   # tsc -b && vite build
+cd frontend && npm run lint && npm test && npm run build   # tsc -b && vite build
 ```
+
+CI: `.github/workflows/ci.yml` ejecuta lo mismo en cada push a `main` y en
+cada pull request (Node 22, PostgreSQL 16 efímero, `npm ci`). Por eso los dos
+`package-lock.json` están versionados: si se cambian dependencias, hay que
+commitear el lockfile actualizado.
 
 Notas de arranque:
 - El backend **no arranca** si faltan las variables `SMTP_*` en `backend/.env`,
@@ -315,7 +341,8 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 114 pruebas unitarias y 98 e2e.
+  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 107 e2e;
+  frontend con 39 pruebas (Vitest).
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).
 - Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para
