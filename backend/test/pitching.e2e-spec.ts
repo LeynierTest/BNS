@@ -90,7 +90,7 @@ describe('Estadísticas de lanzador (e2e)', () => {
       [
         'un promedio de bateo (el del lanzador es su ERA)',
         { batting_average: 0.2 },
-        'Los lanzadores no pueden tener batting_average',
+        'property batting_average should not exist',
       ],
       [
         'sin ponches',
@@ -123,7 +123,6 @@ describe('Estadísticas de lanzador (e2e)', () => {
           position: 'Receptor',
           at_bats: 10,
           hits: 3,
-          batting_average: 0.3,
           walks_allowed: 2,
         })
         .expect(400);
@@ -217,14 +216,17 @@ describe('Estadísticas de lanzador (e2e)', () => {
         data: { name: 'Antiguo', number: 40, years_on_team: 1, team_id: teamId },
       });
 
-      // Simula una fila guardada antes de estas estadísticas (el trigger
-      // actual ya no lo permitiría).
+      // Simula una fila guardada antes de estas estadísticas, con el
+      // promedio de bateo escrito a mano (los triggers actuales ya no lo
+      // permitirían).
       await ctx.prisma.$transaction([
         ctx.prisma.$executeRaw`ALTER TABLE player DISABLE TRIGGER validate_player_stats_trigger`,
+        ctx.prisma.$executeRaw`ALTER TABLE player DISABLE TRIGGER compute_batting_average_trigger`,
         ctx.prisma.$executeRaw`
           INSERT INTO player (team_member_id, position, innings_pitched, runs_allowed, batting_average)
           VALUES (${member.team_member_id}, 'Lanzador', 90.2, 25, 0.15)
         `,
+        ctx.prisma.$executeRaw`ALTER TABLE player ENABLE TRIGGER compute_batting_average_trigger`,
         ctx.prisma.$executeRaw`ALTER TABLE player ENABLE TRIGGER validate_player_stats_trigger`,
       ]);
       await createPitcher(admin, teamId, 'Nuevo', 1, line);

@@ -18,7 +18,10 @@ export interface Player {
   innings_pitched: number | null;
   hits: number | null;
   runs_allowed: number | null;
-  /** null en el lanzador: su promedio es el ERA, que calcula el backend. */
+  /**
+   * Hits / veces al bate, calculado por el backend; null sin turnos al bate
+   * y en el lanzador (su promedio es el ERA).
+   */
   batting_average: number | null;
   hits_allowed: number | null;
   walks_allowed: number | null;
@@ -33,6 +36,18 @@ export interface Player {
  * 90 ⅔), así que solo vale .0, .1 o .2. Misma regla que isBaseballInnings
  * en backend/src/players/innings-pitched.ts.
  */
+/** Promedio de bateo como lo calcula el backend (hits / at_bats, 3 decimales). */
+export function computeBattingAverage(
+  atBats: number,
+  hits: number,
+): number | null {
+  if (atBats <= 0 || hits > atBats) {
+    return null;
+  }
+
+  return Math.round((hits / atBats) * 1000) / 1000;
+}
+
 export function isBaseballInnings(value: number): boolean {
   if (!Number.isFinite(value) || value < 0) {
     return false;

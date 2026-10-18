@@ -703,6 +703,8 @@ export const resources = {
           hitBatsmen: 'Pelotazos (bateadores golpeados)',
           pitcherAverageNote:
             'El promedio del lanzador es su ERA (carreras permitidas × 9 / entradas lanzadas) y se calcula solo.',
+          battingAverageNote:
+            'Promedio de bateo: {{average}}. Se calcula solo (hits / veces al bate).',
           atBats: 'Veces al bate',
           hits: 'Hits',
           battingAverage: 'Promedio de bateo',
@@ -721,6 +723,8 @@ export const resources = {
               'Usa la notación de béisbol: entradas completas y .0, .1 o .2 (90.2 = 90 ⅔).',
             homeRunsExceedHits:
               'Los jonrones permitidos no pueden superar los hits permitidos.',
+            hitsExceedAtBats:
+              'Los hits no pueden superar las veces al bate.',
           },
         },
       },
@@ -1634,6 +1638,8 @@ export const resources = {
           hitBatsmen: 'Hit batsmen',
           pitcherAverageNote:
             "A pitcher's average is their ERA (runs allowed × 9 / innings pitched), calculated automatically.",
+          battingAverageNote:
+            'Batting average: {{average}}. Calculated automatically (hits / at bats).',
           atBats: 'At bats',
           hits: 'Hits',
           battingAverage: 'Batting average',
@@ -1653,6 +1659,8 @@ export const resources = {
               'Use baseball notation: whole innings plus .0, .1 or .2 (90.2 = 90 ⅔).',
             homeRunsExceedHits:
               'Home runs allowed cannot exceed hits allowed.',
+            hitsExceedAtBats:
+              'Hits cannot exceed at bats.',
           },
         },
       },

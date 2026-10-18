@@ -15,7 +15,6 @@ const batter = {
   hits: 130,
   innings_pitched: null,
   runs_allowed: null,
-  batting_average: 0.325,
 } satisfies CreatePlayerDto;
 
 const pitcher = {
@@ -27,7 +26,6 @@ const pitcher = {
   hits: null,
   innings_pitched: 120.1,
   runs_allowed: 30,
-  batting_average: null,
   hits_allowed: 100,
   walks_allowed: 25,
   strikeouts: 110,
@@ -84,7 +82,7 @@ describe('PlayersService · estadísticas según la posición', () => {
   it.each([
     ['un bateador con turnos y hits', batter],
     ['un lanzador con todas sus estadísticas', pitcher],
-    ['un lanzador sin promedio de bateo (omitido)', { ...pitcher, batting_average: undefined }],
+    ['un bateador con tantos hits como turnos', { ...batter, hits: 400 }],
   ])('acepta %s', async (_label, data) => {
     const { prisma, service } = createService();
 
@@ -110,11 +108,6 @@ describe('PlayersService · estadísticas según la posición', () => {
       'Los lanzadores no pueden tener at_bats',
     ],
     [
-      'un lanzador con promedio de bateo',
-      { ...pitcher, batting_average: 0.15 },
-      'Los lanzadores no pueden tener batting_average: su promedio es el ERA',
-    ],
-    [
       'un lanzador con más jonrones que hits permitidos',
       { ...pitcher, hits_allowed: 5, home_runs_allowed: 6 },
       'home_runs_allowed no puede ser mayor que hits_allowed',
@@ -125,9 +118,9 @@ describe('PlayersService · estadísticas según la posición', () => {
       'Los jugadores que no son lanzadores deben tener hits',
     ],
     [
-      'un bateador sin promedio de bateo',
-      { ...batter, batting_average: null },
-      'Los jugadores que no son lanzadores deben tener batting_average',
+      'un bateador con más hits que turnos al bate',
+      { ...batter, hits: 401 },
+      'hits no puede ser mayor que at_bats',
     ],
     [
       'un bateador con carreras permitidas',
@@ -179,7 +172,7 @@ describe('PlayersService · estadísticas según la posición', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('al completarlo se acepta aunque conserve un promedio de bateo antiguo, y se borra', async () => {
+  it('al completarlo se acepta aunque conserve un promedio de bateo antiguo (lo borra la base)', async () => {
     const { prisma, service } = createService();
     const playerUpdate = jest.fn().mockResolvedValue({ team_member_id: 7 });
 
@@ -203,7 +196,6 @@ describe('PlayersService · estadísticas según la posición', () => {
     expect(playerUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: {
-          batting_average: null,
           hits_allowed: 80,
           walks_allowed: 20,
           strikeouts: 85,

@@ -63,11 +63,7 @@ export class UpdatePlayerDto {
   @Min(0)
   runs_allowed?: number | null;
 
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 3 })
-  @Min(0)
-  @Max(1)
-  batting_average?: number | null;
+  // Sin batting_average: lo calcula la base (hits / at_bats).
 
   // Estadísticas solo de lanzador (WHIP, K/9, BB/9 y FIP).
   @IsOptional()

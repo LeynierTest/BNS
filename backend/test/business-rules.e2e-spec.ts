@@ -200,9 +200,13 @@ describe('Reglas de negocio (e2e)', () => {
           position: 'Receptor',
           at_bats: 10,
           hits: 3,
-          batting_average: 0.3,
         })
-        .expect(400);
+        .expect(400)
+        .expect((response) => {
+          expect(response.body.message).toBe(
+            `El número 7 ya está registrado para el equipo ${ref.awayTeamId}`,
+          );
+        });
     });
   });
 

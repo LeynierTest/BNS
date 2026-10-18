@@ -121,7 +121,7 @@ export function createBatter(
     hits: Math.round(battingAverage * 100),
     innings_pitched: null,
     runs_allowed: null,
-    batting_average: battingAverage,
+    // El promedio lo calcula la base: hits / 100 turnos = battingAverage.
   });
 }
 
