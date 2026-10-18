@@ -96,6 +96,7 @@ export function PhaseForm({
     >
       <Input
         label={t('phases.name')}
+        maxLength={50}
         value={name}
         onChange={(event) =>
           setName(event.target.value)

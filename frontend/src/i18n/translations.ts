@@ -316,6 +316,10 @@ export const resources = {
             'Las carreras del equipo local deben ser un entero mayor o igual que cero.',
           audienceInvalid:
             'La audiencia debe ser un entero mayor o igual que cero.',
+          dateOutsidePhase:
+            'La fecha debe estar dentro del período de la fase {{phase}} ({{start}} al {{end}}).',
+          audienceExceedsCapacity:
+            'La audiencia no puede superar la capacidad del estadio ({{capacity}}).',
         },
       },
 
@@ -1138,6 +1142,10 @@ export const resources = {
             'Home runs must be an integer greater than or equal to zero.',
           audienceInvalid:
             'Attendance must be an integer greater than or equal to zero.',
+          dateOutsidePhase:
+            'The date must be within the {{phase}} phase period ({{start}} to {{end}}).',
+          audienceExceedsCapacity:
+            'Attendance cannot exceed the stadium capacity ({{capacity}}).',
         },
       },
 

@@ -127,6 +127,7 @@ export function CoachForm({
       <div className="coach-form-grid">
         <Input
           label={t('coaches.name')}
+          maxLength={150}
           value={name}
           onChange={(event) =>
             setName(event.target.value)
