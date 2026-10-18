@@ -12,6 +12,8 @@ export interface Match {
   visitor_score: number;
   home_score: number;
   audience: number;
+  /** Partido de una serie de desempate del corte (regla 8/4/2). */
+  tiebreaker: boolean;
 }
 
 export interface MatchFormData {
@@ -23,4 +25,6 @@ export interface MatchFormData {
   visitor_score: number;
   home_score: number;
   audience: number;
+  /** Partido de una serie de desempate del corte (regla 8/4/2). */
+  tiebreaker: boolean;
 }

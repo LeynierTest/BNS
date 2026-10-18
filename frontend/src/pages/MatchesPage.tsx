@@ -17,6 +17,7 @@ import { connectMatchesEvents } from '../api/matches-events';
 import { getTeams } from '../api/teams';
 import { getStadiums } from '../api/stadiums';
 import { getPhases } from '../api/phases';
+import { getPhaseQualification } from '../api/qualification';
 import { getApiErrorMessage } from '../api/api-error';
 import { useAuth } from '../auth/use-auth';
 
@@ -40,6 +41,7 @@ import type {
 import type { Team } from '../types/team';
 import type { Stadium } from '../types/stadium';
 import type { Phase } from '../types/phase';
+import type { PhaseQualification } from '../types/qualification';
 
 import './MatchesPage.css';
 
@@ -55,6 +57,8 @@ export default function MatchesPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [stadiums, setStadiums] = useState<Stadium[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
+  const [qualification, setQualification] =
+    useState<PhaseQualification[]>([]);
 
   const [team1Filter, setTeam1Filter] = useState('');
   const [team2Filter, setTeam2Filter] = useState('');
@@ -98,11 +102,13 @@ export default function MatchesPage() {
           teamsData,
           stadiumsData,
           phasesData,
+          qualificationData,
         ] = await Promise.all([
           getMatches(),
           getTeams(),
           getStadiums(),
           getPhases(),
+          getPhaseQualification(),
         ]);
 
         if (ignore) {
@@ -114,6 +120,7 @@ export default function MatchesPage() {
         setTeams(teamsData);
         setStadiums(stadiumsData);
         setPhases(phasesData);
+        setQualification(qualificationData);
         setLoadError(null);
       } catch (error) {
         if (!ignore) {
@@ -333,8 +340,16 @@ export default function MatchesPage() {
       {
         key: 'phase',
         header: t('matches.phase'),
-        render: (match: Match) =>
-          match.phase_name || '—',
+        render: (match: Match) => (
+          <div className="matches-phase">
+            <span>{match.phase_name || '—'}</span>
+            {match.tiebreaker && (
+              <Badge variant="warning">
+                {t('matches.tiebreakerBadge')}
+              </Badge>
+            )}
+          </div>
+        ),
       },
       {
         key: 'audience',
@@ -571,6 +586,8 @@ export default function MatchesPage() {
                     editingMatch.home_score,
                   audience:
                     editingMatch.audience,
+                  tiebreaker:
+                    editingMatch.tiebreaker,
                 }
               : undefined
           }
@@ -590,6 +607,7 @@ export default function MatchesPage() {
             start_date: phase.start_date,
             end_date: phase.end_date,
           }))}
+          qualification={qualification}
           loading={formLoading}
           error={formError}
           onSubmit={handleSubmit}

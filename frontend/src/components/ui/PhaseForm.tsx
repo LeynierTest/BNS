@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  SERIES_PHASE_NAMES,
+  getPhaseOrder,
+} from '../../types/phase';
 import { Button } from './Button';
 import { Input } from './Input';
+import { Select } from './Select';
 import './PhaseForm.css';
 
 export interface PhaseFormData {
@@ -13,6 +18,8 @@ export interface PhaseFormData {
 
 interface PhaseFormProps {
   initialData?: PhaseFormData;
+  /** Las demás fases registradas, para validar nombre único y orden. */
+  otherPhases?: PhaseFormData[];
   loading?: boolean;
   error?: string | null;
   onSubmit: (data: PhaseFormData) => void;
@@ -21,6 +28,7 @@ interface PhaseFormProps {
 
 export function PhaseForm({
   initialData,
+  otherPhases = [],
   loading = false,
   error,
   onSubmit,
@@ -28,8 +36,14 @@ export function PhaseForm({
 }: PhaseFormProps) {
   const { t } = useTranslation();
 
+  // Un nombre antiguo que no es de la Serie no se puede conservar: el
+  // backend solo admite los de SERIES_PHASE_NAMES.
+  const legacyName =
+    initialData && getPhaseOrder(initialData.name) === -1
+      ? initialData.name
+      : null;
   const [name, setName] = useState(
-    initialData?.name ?? '',
+    legacyName === null ? (initialData?.name ?? '') : '',
   );
   const [startDate, setStartDate] = useState(
     initialData?.start_date ?? '',
@@ -68,6 +82,48 @@ export function PhaseForm({
       );
     }
 
+    if (otherPhases.some((phase) => phase.name === name)) {
+      nextErrors.name = t('phases.validation.nameTaken', {
+        phase: name,
+      });
+    }
+
+    // Cada fase empieza después de que termine la anterior y termina antes
+    // de que empiece la siguiente (las fechas YYYY-MM-DD se comparan como texto).
+    const order = getPhaseOrder(name);
+
+    for (const other of otherPhases) {
+      const otherOrder = getPhaseOrder(other.name);
+
+      if (order === -1 || otherOrder === -1) {
+        continue;
+      }
+
+      if (
+        startDate &&
+        otherOrder < order &&
+        other.end_date >= startDate
+      ) {
+        nextErrors.start_date ??= t('phases.validation.mustStartAfter', {
+          phase: name,
+          previous: other.name,
+          date: other.end_date,
+        });
+      }
+
+      if (
+        endDate &&
+        otherOrder > order &&
+        other.start_date <= endDate
+      ) {
+        nextErrors.end_date ??= t('phases.validation.mustEndBefore', {
+          phase: name,
+          next: other.name,
+          date: other.start_date,
+        });
+      }
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -82,7 +138,7 @@ export function PhaseForm({
     }
 
     onSubmit({
-      name: name.trim(),
+      name,
       start_date: startDate,
       end_date: endDate,
     });
@@ -94,16 +150,30 @@ export function PhaseForm({
       onSubmit={handleSubmit}
       noValidate
     >
-      <Input
+      <Select
         label={t('phases.name')}
-        maxLength={50}
         value={name}
         onChange={(event) =>
           setName(event.target.value)
         }
         error={errors.name}
+        hint={
+          legacyName
+            ? t('phases.legacyNameHint', { name: legacyName })
+            : undefined
+        }
         disabled={loading}
         autoFocus
+        options={[
+          { value: '', label: t('phases.selectName') },
+          ...SERIES_PHASE_NAMES.map((phaseName) => ({
+            value: phaseName,
+            label: phaseName,
+            disabled: otherPhases.some(
+              (phase) => phase.name === phaseName,
+            ),
+          })),
+        ]}
       />
 
       <div className="phase-form-dates">

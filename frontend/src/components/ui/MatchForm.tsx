@@ -4,10 +4,17 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { MatchFormData } from '../../types/match';
+import type { PhaseQualification } from '../../types/qualification';
 import { Button } from './Button';
 import { ErrorMessage } from './ErrorMessage';
 import { Input } from './Input';
 import { Select } from './Select';
+import {
+  getMatchQualificationError,
+  getPhaseBlockedError,
+} from './match-form-rules';
+import type { RuleError } from './match-form-rules';
 import './MatchForm.css';
 
 export interface MatchTeamOption {
@@ -28,22 +35,13 @@ export interface MatchPhaseOption {
   end_date: string;
 }
 
-export interface MatchFormData {
-  visitor_team_id: number;
-  home_team_id: number;
-  match_date: string;
-  stadium_id: number;
-  phase_id: number;
-  visitor_score: number;
-  home_score: number;
-  audience: number;
-}
-
 type MatchFormProps = {
   initialData?: MatchFormData;
   teams: MatchTeamOption[];
   stadiums: MatchStadiumOption[];
   phases: MatchPhaseOption[];
+  /** Equipos activos y corte de cada fase (GET /qualification). */
+  qualification?: PhaseQualification[];
   loading?: boolean;
   error?: string | null;
   onSubmit: (data: MatchFormData) => void | Promise<void>;
@@ -55,12 +53,13 @@ export function MatchForm({
   teams,
   stadiums,
   phases,
+  qualification = [],
   loading = false,
   error = null,
   onSubmit,
   onCancel,
 }: MatchFormProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [visitorTeamId, setVisitorTeamId] = useState(
     initialData?.visitor_team_id?.toString() ?? '',
@@ -94,8 +93,56 @@ export function MatchForm({
     initialData?.audience?.toString() ?? '0',
   );
 
+  const [tiebreaker, setTiebreaker] = useState(
+    initialData?.tiebreaker ?? false,
+  );
+
   const [validationError, setValidationError] =
     useState<string | null>(null);
+
+  const selectedPhaseState = qualification.find(
+    (state) => state.phase_id === Number(phaseId),
+  );
+  const activeTeamIds =
+    selectedPhaseState && !selectedPhaseState.blocked
+      ? new Set(
+          selectedPhaseState.participants.map(
+            (team) => team.team_id,
+          ),
+        )
+      : null;
+
+  function formatList(names: string[]) {
+    return new Intl.ListFormat(i18n.language, {
+      type: 'conjunction',
+    }).format(names);
+  }
+
+  function translate(ruleError: RuleError | null) {
+    return ruleError ? t(ruleError.key, ruleError.values) : null;
+  }
+
+  function teamOptions(placeholder: string) {
+    return [
+      {
+        value: '',
+        label: placeholder,
+      },
+      ...teams.map((team) => {
+        const inactive =
+          activeTeamIds !== null &&
+          !activeTeamIds.has(team.team_id);
+
+        return {
+          value: team.team_id.toString(),
+          label: inactive
+            ? `${team.name} (${t('matches.notActive')})`
+            : team.name,
+          disabled: inactive,
+        };
+      }),
+    ];
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -198,6 +245,40 @@ export function MatchForm({
       return;
     }
 
+    if (tiebreaker && visitorRuns === homeRuns) {
+      setValidationError(t('matches.validation.tiebreakerDraw'));
+      return;
+    }
+
+    // Al editar sin tocar equipos, fase ni desempate no se revalida: así se
+    // pueden corregir otros datos de partidos anteriores a la regla.
+    const ruleFieldsChanged =
+      !initialData ||
+      initialData.visitor_team_id !== visitor ||
+      initialData.home_team_id !== home ||
+      initialData.phase_id !== phase ||
+      initialData.tiebreaker !== tiebreaker;
+    const phaseState = qualification.find(
+      (state) => state.phase_id === phase,
+    );
+    const qualificationError =
+      phaseState && ruleFieldsChanged
+        ? translate(
+            getMatchQualificationError(
+              phaseState,
+              teams,
+              [visitor, home],
+              tiebreaker && !initialData,
+              formatList,
+            ),
+          )
+        : null;
+
+    if (qualificationError) {
+      setValidationError(qualificationError);
+      return;
+    }
+
     void onSubmit({
       visitor_team_id: visitor,
       home_team_id: home,
@@ -207,6 +288,7 @@ export function MatchForm({
       visitor_score: visitorRuns,
       home_score: homeRuns,
       audience: attendance,
+      tiebreaker,
     });
   }
 
@@ -223,16 +305,7 @@ export function MatchForm({
             setVisitorTeamId(event.target.value)
           }
           disabled={loading}
-          options={[
-            {
-              value: '',
-              label: t('matches.selectVisitorTeam'),
-            },
-            ...teams.map((team) => ({
-              value: team.team_id.toString(),
-              label: team.name,
-            })),
-          ]}
+          options={teamOptions(t('matches.selectVisitorTeam'))}
         />
 
         <Select
@@ -242,16 +315,7 @@ export function MatchForm({
             setHomeTeamId(event.target.value)
           }
           disabled={loading}
-          options={[
-            {
-              value: '',
-              label: t('matches.selectHomeTeam'),
-            },
-            ...teams.map((team) => ({
-              value: team.team_id.toString(),
-              label: team.name,
-            })),
-          ]}
+          options={teamOptions(t('matches.selectHomeTeam'))}
         />
 
         <Input
@@ -290,6 +354,16 @@ export function MatchForm({
             setPhaseId(event.target.value)
           }
           disabled={loading}
+          hint={
+            selectedPhaseState
+              ? (translate(
+                  getPhaseBlockedError(selectedPhaseState, formatList),
+                ) ??
+                t('matches.activeTeamsHint', {
+                  count: selectedPhaseState.participants.length,
+                }))
+              : undefined
+          }
           options={[
             {
               value: '',
@@ -335,6 +409,21 @@ export function MatchForm({
           disabled={loading}
         />
       </div>
+
+      <label className="match-form-checkbox">
+        <input
+          type="checkbox"
+          checked={tiebreaker}
+          onChange={(event) =>
+            setTiebreaker(event.target.checked)
+          }
+          disabled={loading}
+        />
+        <span>
+          <strong>{t('matches.tiebreaker')}</strong>
+          <small>{t('matches.tiebreakerHint')}</small>
+        </span>
+      </label>
 
       <div className="match-form-actions">
         <Button

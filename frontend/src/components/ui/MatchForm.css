@@ -10,6 +10,36 @@
   gap: var(--space-4);
 }
 
+.match-form-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.match-form-checkbox input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--color-accent);
+}
+
+.match-form-checkbox span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.match-form-checkbox strong {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.match-form-checkbox small {
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
 .match-form-actions {
   display: flex;
   justify-content: flex-end;

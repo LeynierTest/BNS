@@ -118,6 +118,8 @@ function normalizeMatch(value: any): Match {
       value.asistencia ??
       0,
     ),
+
+    tiebreaker: Boolean(value.tiebreaker ?? false),
   };
 }
 
@@ -131,6 +133,7 @@ function toBackendData(data: MatchFormData) {
     away_score: data.visitor_score,
     home_score: data.home_score,
     attendance: data.audience,
+    tiebreaker: data.tiebreaker,
   };
 }
 
@@ -238,6 +241,10 @@ export async function updateMatch(
   if (data.audience !== undefined) {
     backendData.attendance =
       data.audience;
+  }
+
+  if (data.tiebreaker !== undefined) {
+    backendData.tiebreaker = data.tiebreaker;
   }
 
   const response = await api<any>(

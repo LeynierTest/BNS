@@ -10,6 +10,9 @@ import {
   updatePhase,
 } from '../api/phases';
 import { getApiErrorMessage } from '../api/api-error';
+import { connectMatchesEvents } from '../api/matches-events';
+import { getPhaseQualification } from '../api/qualification';
+import { connectTeamsEvents } from '../api/teams-events';
 import { useAuth } from '../auth/use-auth';
 
 import { Badge } from '../components/ui/Badge';
@@ -24,8 +27,10 @@ import { LoadingState } from '../components/ui/LoadingState';
 import { Modal } from '../components/ui/Modal';
 import { PageHeader } from '../components/ui/PageHeader';
 import { PhaseForm } from '../components/ui/PhaseForm';
+import { PhaseQualificationPanel } from '../components/ui/PhaseQualificationPanel';
 
 import type { Phase } from '../types/phase';
+import type { PhaseQualification } from '../types/qualification';
 
 import './PhasesPage.css';
 import { connectPhasesEvents } from '../api/phases-events';
@@ -69,6 +74,15 @@ export default function PhasesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
+  const [qualification, setQualification] = useState<
+    PhaseQualification[]
+  >([]);
+  const [qualificationError, setQualificationError] = useState<
+    string | null
+  >(null);
+  // Los partidos y equipos solo cambian la clasificación, no la lista de fases.
+  const [qualificationReloadCount, setQualificationReloadCount] =
+    useState(0);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
@@ -113,6 +127,35 @@ export default function PhasesPage() {
   }, [reloadCount, t]);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function loadQualification() {
+      try {
+        const data = await getPhaseQualification();
+
+        if (ignore) {
+          return;
+        }
+
+        setQualification(data);
+        setQualificationError(null);
+      } catch (error) {
+        if (!ignore) {
+          setQualificationError(
+            getApiErrorMessage(error, t('qualification.loadError')),
+          );
+        }
+      }
+    }
+
+    void loadQualification();
+
+    return () => {
+      ignore = true;
+    };
+  }, [qualificationReloadCount, reloadCount, t]);
+
+  useEffect(() => {
     const disconnect = connectPhasesEvents({
       onEvent: () => {
         setReloadCount((count) => count + 1);
@@ -120,6 +163,23 @@ export default function PhasesPage() {
     });
 
     return disconnect;
+  }, []);
+
+  useEffect(() => {
+    const reloadQualification = () => {
+      setQualificationReloadCount((count) => count + 1);
+    };
+    const disconnectMatches = connectMatchesEvents({
+      onEvent: reloadQualification,
+    });
+    const disconnectTeams = connectTeamsEvents({
+      onEvent: reloadQualification,
+    });
+
+    return () => {
+      disconnectMatches();
+      disconnectTeams();
+    };
   }, []);
 
   function reloadPhases() {
@@ -407,6 +467,18 @@ export default function PhasesPage() {
         />
       )}
 
+      {!loading && !loadError && (
+        qualificationError ? (
+          <div className="phases-qualification-error">
+            <ErrorMessage message={qualificationError} />
+          </div>
+        ) : (
+          qualification.length > 0 && (
+            <PhaseQualificationPanel phases={qualification} />
+          )
+        )
+      )}
+
       <Modal
         open={modalOpen}
         title={
@@ -427,6 +499,9 @@ export default function PhasesPage() {
                 }
               : undefined
           }
+          otherPhases={allPhases.filter(
+            (phase) => phase.phase_id !== editingPhase?.phase_id,
+          )}
           loading={formLoading}
           error={formError}
           onSubmit={handleSubmit}
