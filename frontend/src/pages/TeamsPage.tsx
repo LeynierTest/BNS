@@ -1,5 +1,5 @@
 import {
-  useCallback, useEffect,
+  useEffect,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,6 +55,7 @@ export function TeamsPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadCount, setReloadCount] = useState(0);
 
   const [isCreateModalOpen, setIsCreateModalOpen] =
     useState(false);
@@ -74,30 +75,53 @@ export function TeamsPage() {
   const [editFormError, setEditFormError] =
     useState('');
 
-  const loadTeams = useCallback(async () => {
-    try {
-      const data = await getTeams();
-      setTeams(data);
-    } catch {
-      setError(t('teams.error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadTeams() {
+      try {
+        const data = await getTeams();
+
+        if (ignore) {
+          return;
+        }
+
+        setTeams(data);
+        setError('');
+      } catch {
+        if (!ignore) {
+          setError(t('teams.error'));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadTeams();
-  }, [loadTeams]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectTeamsEvents({
       onEvent: () => {
-        void loadTeams();
+        setReloadCount((count) => count + 1);
       },
     });
 
     return disconnect;
-  }, [loadTeams]);
+  }, []);
+
+  function retryLoad() {
+    setLoading(true);
+    setError('');
+    setReloadCount((count) => count + 1);
+  }
 
   const hasActiveFilters =
     nameFilter.trim() !== '' ||
@@ -440,9 +464,7 @@ export function TeamsPage() {
           action={
             <Button
               variant="secondary"
-              onClick={() =>
-                window.location.reload()
-              }
+              onClick={retryLoad}
             >
               {t('teams.retry')}
             </Button>

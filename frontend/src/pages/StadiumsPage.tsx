@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -64,6 +63,8 @@ export default function StadiumsPage() {
   const [loadError, setLoadError] = useState<
     string | null
   >(null);
+  const [reloadCount, setReloadCount] =
+    useState(0);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStadium, setEditingStadium] =
@@ -82,39 +83,59 @@ export default function StadiumsPage() {
   const [deleteError, setDeleteError] =
     useState<string | null>(null);
 
-  const loadStadiums = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const data = await getStadiums();
-      setStadiums(data);
-      setAllStadiums(data);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('stadiums.loadError'),
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadStadiums() {
+      try {
+        const data = await getStadiums();
+
+        if (ignore) {
+          return;
+        }
+
+        setStadiums(data);
+        setAllStadiums(data);
+        setLoadError(null);
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(
+            getApiErrorMessage(
+              error,
+              t('stadiums.loadError'),
+            ),
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadStadiums();
-  }, [loadStadiums]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectStadiumsEvents({
       onEvent: () => {
-        void loadStadiums();
+        setReloadCount((count) => count + 1);
       },
     });
 
     return disconnect;
-  }, [loadStadiums]);
+  }, []);
+
+  function retryLoad() {
+    setLoading(true);
+    setLoadError(null);
+    setReloadCount((count) => count + 1);
+  }
 
   const hasActiveFilters =
     nameFilter.trim() !== '' ||
@@ -447,9 +468,7 @@ export default function StadiumsPage() {
 
           <Button
             variant="secondary"
-            onClick={() =>
-              void loadStadiums()
-            }
+            onClick={retryLoad}
           >
             {t('common.retry')}
           </Button>
@@ -500,6 +519,7 @@ export default function StadiumsPage() {
         }
       >
         <StadiumForm
+          key={editingStadium?.stadium_id ?? 'create-stadium-form'}
           initialValues={formInitialValues}
           onSubmit={handleSubmit}
           onCancel={closeModal}

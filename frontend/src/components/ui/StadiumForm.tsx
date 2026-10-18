@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useState,
   type FormEvent,
 } from 'react';
@@ -45,11 +44,6 @@ export default function StadiumForm({
 
   const [errors, setErrors] =
     useState<StadiumFormErrors>({});
-
-  useEffect(() => {
-    setValues(initialValues ?? EMPTY_VALUES);
-    setErrors({});
-  }, [initialValues]);
 
   function updateField<K extends keyof StadiumFormData>(
     field: K,

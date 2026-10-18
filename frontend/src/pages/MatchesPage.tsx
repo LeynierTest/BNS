@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -68,6 +67,8 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] =
     useState<string | null>(null);
+  const [reloadCount, setReloadCount] =
+    useState(0);
 
   const [modalOpen, setModalOpen] =
     useState(false);
@@ -86,54 +87,77 @@ export default function MatchesPage() {
   const [deleteError, setDeleteError] =
     useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const [
-        matchesData,
-        teamsData,
-        stadiumsData,
-        phasesData,
-      ] = await Promise.all([
-        getMatches(),
-        getTeams(),
-        getStadiums(),
-        getPhases(),
-      ]);
-
-      setMatches(matchesData);
-      setAllMatches(matchesData);
-      setTeams(teamsData);
-      setStadiums(stadiumsData);
-      setPhases(phasesData);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('matches.loadError'),
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        const [
+          matchesData,
+          teamsData,
+          stadiumsData,
+          phasesData,
+        ] = await Promise.all([
+          getMatches(),
+          getTeams(),
+          getStadiums(),
+          getPhases(),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        setMatches(matchesData);
+        setAllMatches(matchesData);
+        setTeams(teamsData);
+        setStadiums(stadiumsData);
+        setPhases(phasesData);
+        setLoadError(null);
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(
+            getApiErrorMessage(
+              error,
+              t('matches.loadError'),
+            ),
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadData();
-  }, [loadData]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect =
       connectMatchesEvents({
         onEvent: () => {
-          void loadData();
+          setReloadCount((count) => count + 1);
         },
       });
 
     return disconnect;
-  }, [loadData]);
+  }, []);
+
+  function reloadMatches() {
+    setReloadCount((count) => count + 1);
+  }
+
+  function retryLoad() {
+    setLoading(true);
+    setLoadError(null);
+    reloadMatches();
+  }
 
   const hasActiveFilters =
     team1Filter.trim() !== '' ||
@@ -216,7 +240,7 @@ export default function MatchesPage() {
       }
 
       closeModal();
-      await loadData();
+      reloadMatches();
     } catch (error) {
       setFormError(
         getApiErrorMessage(
@@ -253,7 +277,7 @@ export default function MatchesPage() {
       );
 
       closeDeleteDialog();
-      await loadData();
+      reloadMatches();
     } catch (error) {
       setDeleteError(
         getApiErrorMessage(
@@ -477,7 +501,7 @@ export default function MatchesPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => void loadData()}
+            onClick={retryLoad}
           >
             {t('common.retry')}
           </Button>
@@ -527,6 +551,7 @@ export default function MatchesPage() {
         onClose={closeModal}
       >
         <MatchForm
+          key={editingMatch?.match_id ?? 'create-match-form'}
           initialData={
             editingMatch
               ? {

@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -75,29 +74,43 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] =
     useState<User | null>(null);
 
-  const loadUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const data = await getUsers();
-      setUsers(data);
-      setAllUsers(data);
-    } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          t('users.loadError'),
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadUsers() {
+      try {
+        const data = await getUsers();
+
+        if (ignore) {
+          return;
+        }
+
+        setUsers(data);
+        setAllUsers(data);
+        setError('');
+      } catch (requestError) {
+        if (!ignore) {
+          setError(
+            getApiErrorMessage(
+              requestError,
+              t('users.loadError'),
+            ),
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadUsers();
-  }, [loadUsers]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [t]);
 
   const hasActiveFilters =
     usernameFilter.trim() !== '' ||

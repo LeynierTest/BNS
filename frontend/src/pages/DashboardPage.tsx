@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -68,54 +68,71 @@ export function DashboardPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadCount, setReloadCount] = useState(0);
 
   const locale =
     i18n.resolvedLanguage === 'en'
       ? 'en-US'
       : 'es-ES';
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const [
-        standingsResponse,
-        teamsResponse,
-        playersResponse,
-        stadiumsResponse,
-        matchesResponse,
-      ] = await Promise.all([
-        api.get<Standing[]>('/standings'),
-        api.get<Team[]>('/teams'),
-        api.get<unknown[]>('/players'),
-        api.get<Stadium[]>('/stadiums'),
-        api.get<Match[]>('/matches'),
-      ]);
-
-      setStandings(standingsResponse.data);
-      setTeams(teamsResponse.data);
-      setPlayers(playersResponse.data);
-      setStadiums(stadiumsResponse.data);
-      setMatches(matchesResponse.data);
-    } catch {
-      setError(t('dashboard.error'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadDashboard() {
+      try {
+        const [
+          standingsResponse,
+          teamsResponse,
+          playersResponse,
+          stadiumsResponse,
+          matchesResponse,
+        ] = await Promise.all([
+          api.get<Standing[]>('/standings'),
+          api.get<Team[]>('/teams'),
+          api.get<unknown[]>('/players'),
+          api.get<Stadium[]>('/stadiums'),
+          api.get<Match[]>('/matches'),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        setStandings(standingsResponse.data);
+        setTeams(teamsResponse.data);
+        setPlayers(playersResponse.data);
+        setStadiums(stadiumsResponse.data);
+        setMatches(matchesResponse.data);
+        setError('');
+      } catch {
+        if (!ignore) {
+          setError(t('dashboard.error'));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadDashboard();
-  }, [loadDashboard]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect =
       connectDashboardEvents({
         onEvent: () => {
-          void loadDashboard();
+          setReloadCount((count) => count + 1);
         },
       });
 
     return disconnect;
-  }, [loadDashboard]);
+  }, []);
 
   const recentMatches = useMemo(
     () =>

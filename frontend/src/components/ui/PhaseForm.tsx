@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
@@ -45,13 +42,6 @@ export function PhaseForm({
     start_date?: string;
     end_date?: string;
   }>({});
-
-  useEffect(() => {
-    setName(initialData?.name ?? '');
-    setStartDate(initialData?.start_date ?? '');
-    setEndDate(initialData?.end_date ?? '');
-    setErrors({});
-  }, [initialData]);
 
   function validate() {
     const nextErrors: typeof errors = {};

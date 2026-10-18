@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -68,6 +68,7 @@ export default function PhasesPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
@@ -78,34 +79,58 @@ export default function PhasesPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const loadPhases = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const data = await getPhases();
-      setPhases(data);
-      setAllPhases(data);
-    } catch (error) {
-      setLoadError(getApiErrorMessage(error, t('common.unknownError')));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadPhases() {
+      try {
+        const data = await getPhases();
+
+        if (ignore) {
+          return;
+        }
+
+        setPhases(data);
+        setAllPhases(data);
+        setLoadError(null);
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(getApiErrorMessage(error, t('common.unknownError')));
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadPhases();
-  }, [loadPhases]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectPhasesEvents({
       onEvent: () => {
-        void loadPhases();
+        setReloadCount((count) => count + 1);
       },
     });
 
     return disconnect;
-  }, [loadPhases]);
+  }, []);
+
+  function reloadPhases() {
+    setReloadCount((count) => count + 1);
+  }
+
+  function retryLoad() {
+    setLoading(true);
+    setLoadError(null);
+    reloadPhases();
+  }
 
   const hasActiveFilters =
     nameFilter.trim() !== '' ||
@@ -176,7 +201,7 @@ export default function PhasesPage() {
       }
 
       closeModal();
-      await loadPhases();
+      reloadPhases();
     } catch (error) {
       setFormError(getApiErrorMessage(error, t('common.unknownError')));
     } finally {
@@ -209,7 +234,7 @@ export default function PhasesPage() {
     try {
       await deletePhase(deleteTarget.phase_id);
       closeDeleteDialog();
-      await loadPhases();
+      reloadPhases();
     } catch (error) {
       setDeleteError(getApiErrorMessage(error, t('common.unknownError')));
     } finally {
@@ -352,7 +377,7 @@ export default function PhasesPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => void loadPhases()}
+            onClick={retryLoad}
           >
             {t('common.retry')}
           </Button>
@@ -392,6 +417,7 @@ export default function PhasesPage() {
         onClose={closeModal}
       >
         <PhaseForm
+          key={editingPhase?.phase_id ?? 'create-phase-form'}
           initialData={
             editingPhase
               ? {
