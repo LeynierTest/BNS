@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -61,6 +60,8 @@ export default function CoachesPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] =
     useState<string | null>(null);
+  const [reloadCount, setReloadCount] =
+    useState(0);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCoach, setEditingCoach] =
@@ -78,44 +79,67 @@ export default function CoachesPage() {
   const [deleteError, setDeleteError] =
     useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-
-    try {
-      const [coachesData, teamsData] =
-        await Promise.all([
-          getCoaches(),
-          getTeams(),
-        ]);
-
-      setCoaches(coachesData);
-      setTeams(teamsData);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('coaches.loadError'),
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
   useEffect(() => {
+    // Descarta la respuesta si otra recarga la reemplazó o la página se desmontó.
+    let ignore = false;
+
+    async function loadData() {
+      try {
+        const [coachesData, teamsData] =
+          await Promise.all([
+            getCoaches(),
+            getTeams(),
+          ]);
+
+        if (ignore) {
+          return;
+        }
+
+        setCoaches(coachesData);
+        setTeams(teamsData);
+        setLoadError(null);
+      } catch (error) {
+        if (!ignore) {
+          setLoadError(
+            getApiErrorMessage(
+              error,
+              t('coaches.loadError'),
+            ),
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
     void loadData();
-  }, [loadData]);
+
+    return () => {
+      ignore = true;
+    };
+  }, [reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectCoachesEvents({
       onEvent: () => {
-        void loadData();
+        setReloadCount((count) => count + 1);
       },
     });
 
     return disconnect;
-  }, [loadData]);
+  }, []);
+
+  function reloadCoaches() {
+    setReloadCount((count) => count + 1);
+  }
+
+  function retryLoad() {
+    setLoading(true);
+    setLoadError(null);
+    reloadCoaches();
+  }
 
   const hasActiveFilters =
     nameFilter.trim() !== '' ||
@@ -228,7 +252,7 @@ export default function CoachesPage() {
       }
 
       closeModal();
-      await loadData();
+      reloadCoaches();
     } catch (error) {
       setFormError(
         getApiErrorMessage(
@@ -269,7 +293,7 @@ export default function CoachesPage() {
       );
 
       closeDeleteDialog();
-      await loadData();
+      reloadCoaches();
     } catch (error) {
       setDeleteError(
         getApiErrorMessage(
@@ -492,7 +516,7 @@ export default function CoachesPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => void loadData()}
+            onClick={retryLoad}
           >
             {t('common.retry')}
           </Button>
