@@ -417,6 +417,7 @@ export default function PhasesPage() {
         onClose={closeModal}
       >
         <PhaseForm
+          key={editingPhase?.phase_id ?? 'create-phase-form'}
           initialData={
             editingPhase
               ? {
