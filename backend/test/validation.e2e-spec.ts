@@ -148,6 +148,21 @@ describe('Validación de entrada (e2e)', () => {
         .expect(400);
     });
 
+    it('un entero fuera del rango de INTEGER llega a la base y responde 400 (filtro de Prisma)', async () => {
+      const response = await admin
+        .post('/teams')
+        .send({
+          ...validTeam,
+          championships_participated: 3_000_000_000,
+          championships_won: 0,
+        })
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'Un valor numérico está fuera del rango permitido',
+      );
+    });
+
     it('rechaza propiedades no declaradas en el DTO → 400', async () => {
       await admin
         .post('/teams')
