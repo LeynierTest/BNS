@@ -44,6 +44,13 @@
   opacity: 0.65;
 }
 
+.player-form-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
 .player-form-error {
   color: var(--color-danger);
   font-size: var(--text-xs);

@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import type { PlayerFormData } from '../../api/players';
+import { isBaseballInnings } from '../../types/player';
 import type { Team } from '../../types/team';
 import './PlayerForm.css';
 
@@ -27,7 +28,38 @@ type FormValues = {
   hits: string;
   runs_allowed: string;
   batting_average: string;
+  hits_allowed: string;
+  walks_allowed: string;
+  strikeouts: string;
+  home_runs_allowed: string;
+  hit_batsmen: string;
 };
+
+/** Estadísticas enteras del lanzador, además de las entradas lanzadas. */
+const PITCHER_COUNT_FIELDS = [
+  'runs_allowed',
+  'hits_allowed',
+  'walks_allowed',
+  'strikeouts',
+  'home_runs_allowed',
+  'hit_batsmen',
+] as const;
+
+const PITCHER_FIELD_LABELS: Record<
+  (typeof PITCHER_COUNT_FIELDS)[number],
+  string
+> = {
+  runs_allowed: 'players.form.runsAllowed',
+  hits_allowed: 'players.form.hitsAllowed',
+  walks_allowed: 'players.form.walksAllowed',
+  strikeouts: 'players.form.strikeouts',
+  home_runs_allowed: 'players.form.homeRunsAllowed',
+  hit_batsmen: 'players.form.hitBatsmen',
+};
+
+function toInputValue(value: number | string | null | undefined) {
+  return value === null || value === undefined ? '' : String(value);
+}
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
@@ -86,10 +118,12 @@ export function PlayerForm({
       initialValues?.runs_allowed !== undefined
         ? String(initialValues.runs_allowed)
         : '',
-    batting_average:
-      initialValues?.batting_average !== undefined
-        ? String(initialValues.batting_average)
-        : '',
+    batting_average: toInputValue(initialValues?.batting_average),
+    hits_allowed: toInputValue(initialValues?.hits_allowed),
+    walks_allowed: toInputValue(initialValues?.walks_allowed),
+    strikeouts: toInputValue(initialValues?.strikeouts),
+    home_runs_allowed: toInputValue(initialValues?.home_runs_allowed),
+    hit_batsmen: toInputValue(initialValues?.hit_batsmen),
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -147,11 +181,12 @@ export function PlayerForm({
       nextErrors.position = t('players.form.validation.required');
     }
 
-    if (values.batting_average.trim() === '') {
+    // El promedio del lanzador es su ERA, que calcula el backend.
+    if (!isPitcher && values.batting_average.trim() === '') {
       nextErrors.batting_average = t(
         'players.form.validation.required',
       );
-    } else {
+    } else if (!isPitcher) {
       const average = Number(values.batting_average);
 
       if (
@@ -177,18 +212,33 @@ export function PlayerForm({
         nextErrors.innings_pitched = t(
           'players.form.validation.nonNegativeNumber',
         );
+      } else if (!isBaseballInnings(Number(values.innings_pitched))) {
+        nextErrors.innings_pitched = t(
+          'players.form.validation.inningsNotation',
+        );
       }
 
-      if (values.runs_allowed.trim() === '') {
-        nextErrors.runs_allowed = t(
-          'players.form.validation.required',
-        );
-      } else if (
-        !Number.isInteger(Number(values.runs_allowed)) ||
-        Number(values.runs_allowed) < 0
+      for (const field of PITCHER_COUNT_FIELDS) {
+        if (values[field].trim() === '') {
+          nextErrors[field] = t('players.form.validation.required');
+        } else if (
+          !Number.isInteger(Number(values[field])) ||
+          Number(values[field]) < 0
+        ) {
+          nextErrors[field] = t(
+            'players.form.validation.nonNegativeInteger',
+          );
+        }
+      }
+
+      // Todo jonrón es un hit.
+      if (
+        !nextErrors.home_runs_allowed &&
+        !nextErrors.hits_allowed &&
+        Number(values.home_runs_allowed) > Number(values.hits_allowed)
       ) {
-        nextErrors.runs_allowed = t(
-          'players.form.validation.nonNegativeInteger',
+        nextErrors.home_runs_allowed = t(
+          'players.form.validation.homeRunsExceedHits',
         );
       }
     } else {
@@ -245,7 +295,16 @@ export function PlayerForm({
       runs_allowed: isPitcher
         ? Number(values.runs_allowed)
         : null,
-      batting_average: Number(values.batting_average),
+      batting_average: isPitcher
+        ? null
+        : Number(values.batting_average),
+      hits_allowed: isPitcher ? Number(values.hits_allowed) : null,
+      walks_allowed: isPitcher ? Number(values.walks_allowed) : null,
+      strikeouts: isPitcher ? Number(values.strikeouts) : null,
+      home_runs_allowed: isPitcher
+        ? Number(values.home_runs_allowed)
+        : null,
+      hit_batsmen: isPitcher ? Number(values.hit_batsmen) : null,
     };
 
     await onSubmit(data);
@@ -359,7 +418,7 @@ export function PlayerForm({
               label={t('players.form.inningsPitched')}
               type="number"
               min="0"
-              step="0.01"
+              step="0.1"
               value={values.innings_pitched}
               onChange={(event) =>
                 updateValue(
@@ -367,24 +426,30 @@ export function PlayerForm({
                   event.target.value,
                 )
               }
+              hint={t('players.form.inningsPitchedHint')}
               error={errors.innings_pitched}
               disabled={loading}
             />
 
-            <Input
-              label={t('players.form.runsAllowed')}
-              type="number"
-              min="0"
-              value={values.runs_allowed}
-              onChange={(event) =>
-                updateValue(
-                  'runs_allowed',
-                  event.target.value,
-                )
-              }
-              error={errors.runs_allowed}
-              disabled={loading}
-            />
+            {PITCHER_COUNT_FIELDS.map((field) => (
+              <Input
+                key={field}
+                label={t(PITCHER_FIELD_LABELS[field])}
+                type="number"
+                min="0"
+                value={values[field]}
+                onChange={(event) =>
+                  updateValue(field, event.target.value)
+                }
+                hint={
+                  field === 'runs_allowed'
+                    ? t('players.form.runsAllowedHint')
+                    : undefined
+                }
+                error={errors[field]}
+                disabled={loading}
+              />
+            ))}
           </>
         ) : (
           <>
@@ -414,19 +479,25 @@ export function PlayerForm({
           </>
         )}
 
-        <Input
-          label={t('players.form.battingAverage')}
-          type="number"
-          min="0"
-          max="1"
-          step="0.001"
-          value={values.batting_average}
-          onChange={(event) =>
-            updateValue('batting_average', event.target.value)
-          }
-          error={errors.batting_average}
-          disabled={loading}
-        />
+        {isPitcher ? (
+          <p className="player-form-note">
+            {t('players.form.pitcherAverageNote')}
+          </p>
+        ) : (
+          <Input
+            label={t('players.form.battingAverage')}
+            type="number"
+            min="0"
+            max="1"
+            step="0.001"
+            value={values.batting_average}
+            onChange={(event) =>
+              updateValue('batting_average', event.target.value)
+            }
+            error={errors.batting_average}
+            disabled={loading}
+          />
+        )}
       </div>
 
       {serverError && (

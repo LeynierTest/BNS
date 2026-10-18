@@ -11,6 +11,7 @@ import { getApiErrorMessage } from '../api/api-error';
 import './AllStarTeamPage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { PitcherStatsCard } from '../components/ui/PitcherStatsCard';
 
 export function AllStarTeamPage() {
   const { t } = useTranslation();
@@ -85,10 +86,13 @@ export function AllStarTeamPage() {
     },
     {
       key: 'average',
-      header: t('allStarTeam.battingAverage'),
+      header: t('allStarTeam.average'),
+      // De bateo en cada posición; el del lanzador es su ERA.
       render: (player: AllStarPlayer) => (
         <span className="all-star-average">
-          {player.batting_average.toFixed(3)}
+          {player.pitching
+            ? `${player.pitching.era.toFixed(2)} ERA`
+            : (player.batting_average?.toFixed(3) ?? '—')}
         </span>
       ),
     },
@@ -140,6 +144,17 @@ export function AllStarTeamPage() {
               `${player.player_position}-${player.player_name}`
             }
           />
+
+            {players.map((player) =>
+              player.pitching ? (
+                <PitcherStatsCard
+                  key={`${player.player_position}-${player.player_name}`}
+                  playerName={player.player_name}
+                  teamName={player.team_name}
+                  pitching={player.pitching}
+                />
+              ) : null,
+            )}
           </>
         )}
     </section>
