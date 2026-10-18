@@ -564,6 +564,7 @@ export default function CoachesPage() {
         onClose={closeModal}
       >
         <CoachForm
+          key={editingCoach?.team_member_id ?? 'create-coach-form'}
           initialData={
             editingCoach
               ? {

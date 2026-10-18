@@ -1,7 +1,4 @@
-import {
-  useEffect,
-  useState,
-} from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -54,23 +51,6 @@ export function CoachForm({
 
   const [validationError, setValidationError] =
     useState<string | null>(null);
-
-  useEffect(() => {
-    setName(initialData?.name ?? '');
-    setNumber(
-      initialData?.number?.toString() ?? '',
-    );
-    setYearsOnTeam(
-      initialData?.years_on_team?.toString() ?? '0',
-    );
-    setTeamId(
-      initialData?.team_id?.toString() ?? '',
-    );
-    setYearsExperience(
-      initialData?.years_experience?.toString() ?? '0',
-    );
-    setValidationError(null);
-  }, [initialData]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
