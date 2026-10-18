@@ -79,6 +79,8 @@ export const resources = {
         send: 'Enviar',
         sending: 'Enviando...',
         close: 'Cerrar',
+        ownEmailOnly:
+          'Los reportes se envían a tu correo. Solo un administrador puede enviarlos a otra dirección.',
       },
       reportPdf: {
         download: 'Descargar PDF',
@@ -1012,6 +1014,8 @@ export const resources = {
         send: 'Send',
         sending: 'Sending...',
         close: 'Close',
+        ownEmailOnly:
+          'Reports are sent to your own email. Only an administrator can send them to another address.',
       },
 
       reportPdf: {
