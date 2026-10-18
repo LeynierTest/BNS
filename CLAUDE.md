@@ -170,6 +170,13 @@ Piezas transversales (no repetir su lógica en cada módulo):
   compartido): el login se bloquea (429, incluso con la contraseña correcta)
   tras 5 fallos por usuario e IP o 30 por IP en 15 minutos; cada usuario
   puede pedir 5 reportes por correo cada 10 minutos.
+- Registro público (`POST /auth/register`, `@Public`, página `/register`
+  enlazada desde el login): cualquiera crea su cuenta, siempre con el rol
+  User, y entra con la sesión iniciada. El CRUD de Usuarios no cambia: los
+  administradores se siguen creando ahí. Usuario y email únicos sin
+  distinguir mayúsculas (bajo `pg_advisory_xact_lock(843)`), email en
+  minúsculas; reglas en `auth/registration-rules.ts` (espejo en
+  `frontend/src/auth/registration-rules.ts`); 10 intentos por IP y hora.
 - Reportes por correo: un User solo puede enviarlos a su propio correo (403
   si pide otro, y es el destino por defecto); un Administrator, a cualquiera.
 - **Series y temporadas** — pedido del equipo (2026-10-18), ampliación del
@@ -319,7 +326,7 @@ npm run start:dev           # queda sirviendo en http://localhost:3000
 
 # ── Seed del primer usuario administrador (una sola vez) ────
 # role_id = 1 → Administrador · role_id = 2 → Usuario
-# No hay registro público; el primer admin se crea a mano:
+# El registro público solo crea cuentas User; el primer admin se crea a mano:
 node -e "console.log(require('bcrypt').hashSync('<password>', 10))"
 psql "$DATABASE_URL" -c "INSERT INTO app_user (username, email, password_hash, active, role_id) VALUES ('<username>', '<email>', '<hash_generado_arriba>', true, 1);"
 
@@ -376,8 +383,8 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 121 e2e;
-  frontend con 45 pruebas (Vitest).
+  pasan `oxlint` sin warnings; backend con 122 pruebas unitarias y 128 e2e;
+  frontend con 56 pruebas (Vitest).
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).
 - Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para
