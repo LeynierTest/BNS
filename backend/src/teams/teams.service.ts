@@ -120,62 +120,62 @@ export class TeamsService {
     return updatedTeam;
   }
 
+  /**
+   * Solo se elimina un equipo sin historial (p. ej. creado por error). Sus
+   * peloteros y partidos forman parte de la Serie: borrarlos en cascada
+   * cambiaría la tabla, los reportes y la clasificación de los demás
+   * equipos, así que se rechaza explicando qué lo impide. La comprobación
+   * corre dentro de la transacción con el bloqueo de escrituras de la Serie
+   * (las altas de partidos lo toman); las claves foráneas cubren el resto.
+   */
   async deleteTeam(id: number) {
-  const canDelete = await this.canDeleteTeam(id);
+    const team = await this.getTeamById(id);
 
-  if (!canDelete) {
-    throw new BadRequestException(
-      'Este equipo no se puede eliminar porque tiene peloteros o partidos relacionados',
-    );
-  }
+    const deletedTeam =
+      await this.qualificationService.runConsistentWrite({
+        validate: async (tx) => {
+          const [members, matches] = await Promise.all([
+            tx.team_member.count({
+              where: {
+                team_id: id,
+              },
+            }),
+            tx.match.count({
+              where: {
+                OR: [{ away_team_id: id }, { home_team_id: id }],
+              },
+            }),
+          ]);
 
-  const deletedTeam =
-    await this.qualificationService.runConsistentWrite({
-      simulate: (snapshot) => ({
-        ...snapshot,
-        teams: snapshot.teams.filter((team) => team.team_id !== id),
-      }),
-      write: (tx) =>
-        tx.team.delete({
-          where: {
-            team_id: id,
-          },
+          if (members > 0 || matches > 0) {
+            const history = [
+              members > 0 &&
+                `${members} ${members === 1 ? 'pelotero' : 'peloteros'}`,
+              matches > 0 &&
+                `${matches} ${matches === 1 ? 'partido' : 'partidos'}`,
+            ]
+              .filter(Boolean)
+              .join(' y ');
+
+            throw new BadRequestException(
+              `No se puede eliminar ${team.name} porque tiene historial en la Serie (${history}). Solo se puede eliminar un equipo sin peloteros ni partidos`,
+            );
+          }
+        },
+        simulate: (snapshot) => ({
+          ...snapshot,
+          teams: snapshot.teams.filter((current) => current.team_id !== id),
         }),
-    });
-
-  this.teamsEventsService.emit('team.deleted', deletedTeam);
-
-  return deletedTeam;
-}
-
-  async canDeleteTeam(id: number): Promise<boolean> {
-  const team = await this.getTeamById(id);
-
-  const [playersCount, matchesCount] =
-    await Promise.all([
-      this.prisma.team_member.count({
-        where: {
-          team_id: team.team_id,
-        },
-      }),
-
-      this.prisma.match.count({
-        where: {
-          OR: [
-            {
-              away_team_id: team.team_id,
+        write: (tx) =>
+          tx.team.delete({
+            where: {
+              team_id: id,
             },
-            {
-              home_team_id: team.team_id,
-            },
-          ],
-        },
-      }),
-    ]);
+          }),
+      });
 
-  return (
-    playersCount === 0 &&
-    matchesCount === 0
-  );
-}
+    this.teamsEventsService.emit('team.deleted', deletedTeam);
+
+    return deletedTeam;
+  }
 }
