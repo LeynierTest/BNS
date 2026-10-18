@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   FileTypeValidator,
+  Ip,
   MaxFileSizeValidator,
   ParseFilePipe,
   Post,
@@ -36,10 +37,11 @@ export class AuthController {
   @Post('login')
   async login(
     @Body() data: LoginDto,
+    @Ip() ip: string,
     @Res({ passthrough: true }) response: Response,
   ) {
     const { accessToken, user } =
-      await this.authService.login(data);
+      await this.authService.login(data, ip);
 
     response.cookie(
       ACCESS_TOKEN_COOKIE,
