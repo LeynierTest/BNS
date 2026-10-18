@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
+import { isPitcherPosition } from './player-positions';
 
 @Injectable()
 export class PlayersService {
@@ -78,10 +79,7 @@ export class PlayersService {
       runs_allowed?: number | null;
     },
   ) {
-    const isPitcher =
-      position.trim().toLowerCase() === 'lanzador';
-
-    if (isPitcher) {
+    if (isPitcherPosition(position)) {
       if (
         data.innings_pitched === null ||
         data.innings_pitched === undefined ||

@@ -1,12 +1,15 @@
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import { PLAYER_POSITIONS } from '../player-positions';
 
 export class CreatePlayerDto {
   @IsString()
@@ -27,7 +30,9 @@ export class CreatePlayerDto {
   team_id: number;
 
   @IsString()
-  @IsNotEmpty()
+  @IsIn(PLAYER_POSITIONS, {
+    message: `position debe ser una de: ${PLAYER_POSITIONS.join(', ')}`,
+  })
   @MaxLength(50)
   position: string;
 
@@ -39,6 +44,7 @@ export class CreatePlayerDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(9999.99)
   innings_pitched: number | null;
 
   @IsOptional()
@@ -53,5 +59,6 @@ export class CreatePlayerDto {
 
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
+  @Max(1)
   batting_average: number;
 }
