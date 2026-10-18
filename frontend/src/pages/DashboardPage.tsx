@@ -12,50 +12,19 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import api from '../api/client';
+import { getMatches } from '../api/matches';
+import { getPlayers } from '../api/players';
+import { getStadiums } from '../api/stadiums';
+import { getStandings } from '../api/standings';
+import { getTeams } from '../api/teams';
 import { useAuth } from '../auth/use-auth';
 import { connectDashboardEvents } from '../api/dashboard-events';
+import type { Match } from '../types/match';
+import type { Player } from '../types/player';
+import type { Stadium } from '../types/stadium';
+import type { Standing } from '../types/standing';
+import type { Team } from '../types/team';
 import './DashboardPage.css';
-
-type Standing = {
-  team_id: number;
-  team_name: string;
-  games_played: number;
-  points: number;
-};
-
-type Team = {
-  team_id: number;
-  name: string;
-};
-
-type Stadium = {
-  stadium_id: number;
-  name: string;
-};
-
-type MatchTeam = {
-  team_id: number;
-  name: string;
-};
-
-type Match = {
-  match_id: number;
-  match_date: string;
-  away_score: number;
-  home_score: number;
-  attendance: number;
-  team_match_away_team_idToteam: MatchTeam;
-  team_match_home_team_idToteam: MatchTeam;
-  stadium: {
-    stadium_id: number;
-    name: string;
-  };
-  phase: {
-    phase_id: number;
-    name: string;
-  };
-};
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -63,7 +32,7 @@ export function DashboardPage() {
 
   const [standings, setStandings] = useState<Standing[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [players, setPlayers] = useState<unknown[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [stadiums, setStadiums] = useState<Stadium[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,28 +51,28 @@ export function DashboardPage() {
     async function loadDashboard() {
       try {
         const [
-          standingsResponse,
-          teamsResponse,
-          playersResponse,
-          stadiumsResponse,
-          matchesResponse,
+          standingsData,
+          teamsData,
+          playersData,
+          stadiumsData,
+          matchesData,
         ] = await Promise.all([
-          api.get<Standing[]>('/standings'),
-          api.get<Team[]>('/teams'),
-          api.get<unknown[]>('/players'),
-          api.get<Stadium[]>('/stadiums'),
-          api.get<Match[]>('/matches'),
+          getStandings(),
+          getTeams(),
+          getPlayers(),
+          getStadiums(),
+          getMatches(),
         ]);
 
         if (ignore) {
           return;
         }
 
-        setStandings(standingsResponse.data);
-        setTeams(teamsResponse.data);
-        setPlayers(playersResponse.data);
-        setStadiums(stadiumsResponse.data);
-        setMatches(matchesResponse.data);
+        setStandings(standingsData);
+        setTeams(teamsData);
+        setPlayers(playersData);
+        setStadiums(stadiumsData);
+        setMatches(matchesData);
         setError('');
       } catch {
         if (!ignore) {
@@ -444,18 +413,14 @@ export function DashboardPage() {
                         aria-hidden="true"
                       />
 
-                      {match.phase.name}
+                      {match.phase_name}
                     </span>
                   </div>
 
                   <div className="match-teams">
                     <div>
                       <strong>
-                        {
-                          match
-                            .team_match_away_team_idToteam
-                            .name
-                        }
+                        {match.visitor_team_name}
                       </strong>
 
                       <span>
@@ -464,7 +429,7 @@ export function DashboardPage() {
                     </div>
 
                     <strong className="match-score">
-                      {match.away_score}
+                      {match.visitor_score}
                     </strong>
                   </div>
 
@@ -477,11 +442,7 @@ export function DashboardPage() {
                   <div className="match-teams">
                     <div>
                       <strong>
-                        {
-                          match
-                            .team_match_home_team_idToteam
-                            .name
-                        }
+                        {match.home_team_name}
                       </strong>
 
                       <span>
@@ -502,7 +463,7 @@ export function DashboardPage() {
                         aria-hidden="true"
                       />
 
-                      {match.stadium.name}
+                      {match.stadium_name}
                     </span>
 
                     <span className="match-meta-item">
@@ -512,7 +473,7 @@ export function DashboardPage() {
                         aria-hidden="true"
                       />
 
-                      {match.attendance.toLocaleString(
+                      {match.audience.toLocaleString(
                         locale,
                       )}{' '}
                       {t(
