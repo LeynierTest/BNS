@@ -1,14 +1,11 @@
-import {
-  IsNotEmpty,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsIn } from 'class-validator';
 import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
+import { PHASE_NAMES } from '../series-phases';
 
 export class CreatePhaseDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
+  @IsIn(PHASE_NAMES, {
+    message: `name debe ser una de: ${PHASE_NAMES.join(', ')}`,
+  })
   name: string;
 
   @IsDateOnly()

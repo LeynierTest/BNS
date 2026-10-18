@@ -5,13 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { QualificationService } from '../qualification/qualification.service';
+import { UNSAVED_ID } from '../qualification/series-qualification';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
 @Injectable()
 export class TeamsService {
   constructor(private readonly prisma: PrismaService,
-    private readonly teamsEventsService: TeamsEventsService) {}
+    private readonly teamsEventsService: TeamsEventsService,
+    private readonly qualificationService: QualificationService) {}
 
   async getAllTeams() {
     return this.prisma.team.findMany({
@@ -66,9 +69,22 @@ export class TeamsService {
       );
     }
 
-    const createdTeam = await this.prisma.team.create({
-      data,
-    });
+    // Un equipo nuevo juega la Primera Ronda: no puede reabrir un corte del
+    // que ya dependen partidos de fases posteriores.
+    const createdTeam =
+      await this.qualificationService.runConsistentWrite({
+        simulate: (snapshot) => ({
+          ...snapshot,
+          teams: [
+            ...snapshot.teams,
+            { team_id: UNSAVED_ID, name: data.name },
+          ],
+        }),
+        write: (tx) =>
+          tx.team.create({
+            data,
+          }),
+      });
 
     this.teamsEventsService.emit('team.created', createdTeam);
 
@@ -113,11 +129,19 @@ export class TeamsService {
     );
   }
 
-  const deletedTeam = await this.prisma.team.delete({
-    where: {
-      team_id: id,
-    },
-  });
+  const deletedTeam =
+    await this.qualificationService.runConsistentWrite({
+      simulate: (snapshot) => ({
+        ...snapshot,
+        teams: snapshot.teams.filter((team) => team.team_id !== id),
+      }),
+      write: (tx) =>
+        tx.team.delete({
+          where: {
+            team_id: id,
+          },
+        }),
+    });
 
   this.teamsEventsService.emit('team.deleted', deletedTeam);
 

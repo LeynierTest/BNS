@@ -1,5 +1,7 @@
 import {
+  IsBoolean,
   IsInt,
+  IsOptional,
   Min,
 } from 'class-validator';
 import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
@@ -35,4 +37,9 @@ export class CreateMatchDto {
   @IsInt()
   @Min(0)
   attendance: number;
+
+  /** Partido de una serie de desempate del corte (regla 8/4/2). */
+  @IsOptional()
+  @IsBoolean()
+  tiebreaker?: boolean;
 }

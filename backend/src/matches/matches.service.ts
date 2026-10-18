@@ -8,12 +8,23 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateMatchDto } from './dto/create-match.dto';
 import { UpdateMatchDto } from './dto/update-match.dto';
 import { MatchesEventsService } from './matches-events.service';
+import { QualificationService } from '../qualification/qualification.service';
+import { UNSAVED_ID } from '../qualification/series-qualification';
+import type { SeriesMatch } from '../qualification/series-qualification';
+
+const matchInclude = {
+  team_match_home_team_idToteam: true,
+  team_match_away_team_idToteam: true,
+  stadium: true,
+  phase: true,
+} satisfies Prisma.matchInclude;
 
 @Injectable()
 export class MatchesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly matchesEventsService: MatchesEventsService,
+    private readonly qualificationService: QualificationService,
   ) {}
 
   async searchMatches(
@@ -40,12 +51,7 @@ export class MatchesService {
       orderBy: {
         match_date: 'asc',
       },
-      include: {
-        team_match_home_team_idToteam: true,
-        team_match_away_team_idToteam: true,
-        stadium: true,
-        phase: true,
-      },
+      include: matchInclude,
     });
   }
 
@@ -54,12 +60,7 @@ export class MatchesService {
       where: {
         match_id: id,
       },
-      include: {
-        team_match_home_team_idToteam: true,
-        team_match_away_team_idToteam: true,
-        stadium: true,
-        phase: true,
-      },
+      include: matchInclude,
     });
 
     if (!match) {
@@ -166,25 +167,41 @@ export class MatchesService {
     this.validateMatchDateInPhase(matchDate, phase);
     this.validateAttendance(data.attendance, stadium);
 
+    const tiebreaker = data.tiebreaker ?? false;
+    const seriesMatch: SeriesMatch = {
+      match_id: UNSAVED_ID,
+      phase_id: data.phase_id,
+      away_team_id: data.away_team_id,
+      home_team_id: data.home_team_id,
+      away_score: data.away_score,
+      home_score: data.home_score,
+      tiebreaker,
+      match_date: data.match_date,
+    };
+
     try {
       const createdMatch =
-        await this.prisma.match.create({
-          data: {
-            away_team_id: data.away_team_id,
-            home_team_id: data.home_team_id,
-            match_date: matchDate,
-            stadium_id: data.stadium_id,
-            phase_id: data.phase_id,
-            away_score: data.away_score,
-            home_score: data.home_score,
-            attendance: data.attendance,
-          },
-          include: {
-            team_match_home_team_idToteam: true,
-            team_match_away_team_idToteam: true,
-            stadium: true,
-            phase: true,
-          },
+        await this.qualificationService.runConsistentWrite({
+          focusMatchId: UNSAVED_ID,
+          simulate: (snapshot) => ({
+            ...snapshot,
+            matches: [...snapshot.matches, seriesMatch],
+          }),
+          write: (tx) =>
+            tx.match.create({
+              data: {
+                away_team_id: data.away_team_id,
+                home_team_id: data.home_team_id,
+                match_date: matchDate,
+                stadium_id: data.stadium_id,
+                phase_id: data.phase_id,
+                away_score: data.away_score,
+                home_score: data.home_score,
+                attendance: data.attendance,
+                tiebreaker,
+              },
+              include: matchInclude,
+            }),
         });
 
       this.matchesEventsService.emit(
@@ -311,44 +328,63 @@ export class MatchesService {
       stadium,
     );
 
+    const seriesMatch: SeriesMatch = {
+      match_id: id,
+      phase_id: phaseId,
+      away_team_id: awayTeamId,
+      home_team_id: homeTeamId,
+      away_score: data.away_score ?? currentMatch.away_score,
+      home_score: data.home_score ?? currentMatch.home_score,
+      tiebreaker: data.tiebreaker ?? currentMatch.tiebreaker,
+      match_date: matchDate.toISOString().slice(0, 10),
+    };
+
     try {
       const updatedMatch =
-        await this.prisma.match.update({
-          where: {
-            match_id: id,
-          },
-          data: {
-            ...(data.away_team_id !== undefined && {
-              away_team_id: data.away_team_id,
+        await this.qualificationService.runConsistentWrite({
+          focusMatchId: id,
+          simulate: (snapshot) => ({
+            ...snapshot,
+            matches: snapshot.matches.map((match) =>
+              match.match_id === id ? seriesMatch : match,
+            ),
+          }),
+          write: (tx) =>
+            tx.match.update({
+              where: {
+                match_id: id,
+              },
+              data: {
+                ...(data.away_team_id !== undefined && {
+                  away_team_id: data.away_team_id,
+                }),
+                ...(data.home_team_id !== undefined && {
+                  home_team_id: data.home_team_id,
+                }),
+                ...(data.match_date !== undefined && {
+                  match_date: matchDate,
+                }),
+                ...(data.stadium_id !== undefined && {
+                  stadium_id: data.stadium_id,
+                }),
+                ...(data.phase_id !== undefined && {
+                  phase_id: data.phase_id,
+                }),
+                ...(data.away_score !== undefined && {
+                  away_score: data.away_score,
+                }),
+                ...(data.home_score !== undefined && {
+                  home_score: data.home_score,
+                }),
+                ...(data.attendance !== undefined && {
+                  attendance: data.attendance,
+                }),
+                ...(data.tiebreaker !== undefined && {
+                  tiebreaker: data.tiebreaker,
+                }),
+              },
+              include: matchInclude,
             }),
-            ...(data.home_team_id !== undefined && {
-              home_team_id: data.home_team_id,
-            }),
-            ...(data.match_date !== undefined && {
-              match_date: matchDate,
-            }),
-            ...(data.stadium_id !== undefined && {
-              stadium_id: data.stadium_id,
-            }),
-            ...(data.phase_id !== undefined && {
-              phase_id: data.phase_id,
-            }),
-            ...(data.away_score !== undefined && {
-              away_score: data.away_score,
-            }),
-            ...(data.home_score !== undefined && {
-              home_score: data.home_score,
-            }),
-            ...(data.attendance !== undefined && {
-              attendance: data.attendance,
-            }),
-          },
-          include: {
-            team_match_home_team_idToteam: true,
-            team_match_away_team_idToteam: true,
-            stadium: true,
-            phase: true,
-          },
         });
 
       this.matchesEventsService.emit(
@@ -384,10 +420,19 @@ export class MatchesService {
     await this.getMatchById(id);
 
     const deletedMatch =
-      await this.prisma.match.delete({
-        where: {
-          match_id: id,
-        },
+      await this.qualificationService.runConsistentWrite({
+        simulate: (snapshot) => ({
+          ...snapshot,
+          matches: snapshot.matches.filter(
+            (match) => match.match_id !== id,
+          ),
+        }),
+        write: (tx) =>
+          tx.match.delete({
+            where: {
+              match_id: id,
+            },
+          }),
       });
 
     this.matchesEventsService.emit(
