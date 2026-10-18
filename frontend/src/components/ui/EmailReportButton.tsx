@@ -5,6 +5,7 @@ import {
   type ReportEmailType,
   type SendReportEmailData,
 } from '../../api/reportEmail';
+import { useAuth } from '../../auth/use-auth';
 import './EmailReportButton.css';
 
 interface EmailReportButtonProps {
@@ -17,9 +18,15 @@ export default function EmailReportButton({
   params,
 }: EmailReportButtonProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
+  // El backend solo deja elegir destinatario a un Administrator; el resto
+  // recibe los reportes en su propio correo.
+  const canChooseRecipient = user?.role === 'Administrator';
+  const defaultRecipient = canChooseRecipient ? '' : (user?.email ?? '');
 
   const [isOpen, setIsOpen] = useState(false);
-  const [recipient, setRecipient] = useState('');
+  const [recipient, setRecipient] = useState(defaultRecipient);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +35,7 @@ export default function EmailReportButton({
     if (loading) return;
 
     setIsOpen(false);
-    setRecipient('');
+    setRecipient(defaultRecipient);
     setMessage('');
     setError('');
   };
@@ -64,7 +71,7 @@ export default function EmailReportButton({
       });
 
       setMessage(response.message);
-      setRecipient('');
+      setRecipient(defaultRecipient);
     } catch (requestError: any) {
       const backendMessage =
         requestError?.response?.data?.message;
@@ -134,8 +141,23 @@ export default function EmailReportButton({
                 placeholder={t('reportEmail.placeholder')}
                 autoComplete="email"
                 disabled={loading}
+                readOnly={!canChooseRecipient}
+                aria-describedby={
+                  canChooseRecipient
+                    ? undefined
+                    : `report-email-${report}-hint`
+                }
                 autoFocus
               />
+
+              {!canChooseRecipient && (
+                <p
+                  id={`report-email-${report}-hint`}
+                  className="email-report-hint"
+                >
+                  {t('reportEmail.ownEmailOnly')}
+                </p>
+              )}
 
               {error && (
                 <p className="email-report-error" role="alert">

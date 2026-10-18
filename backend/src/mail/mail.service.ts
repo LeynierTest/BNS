@@ -1,22 +1,46 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
+import {
+  FixedWindowLimiter,
+  tooManyRequests,
+} from '../common/rate-limit/fixed-window-limiter';
+import { PrismaService } from '../prisma/prisma.service';
 import { ReportsService } from '../reports/reports.service';
 import {
   ReportType,
   SendReportEmailDto,
 } from './dto/send-report-email.dto';
 
+/** Correos de reportes que puede pedir cada usuario cada 10 minutos. */
+const EMAILS_PER_USER = 5;
+const EMAIL_WINDOW_MS = 10 * 60_000;
+
+export type ReportEmailRequester = {
+  userId: number;
+  role: string;
+};
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly transporter: Transporter;
+  // Evita usar el SMTP del sistema para enviar correos en masa.
+  private readonly emailsByUser = new FixedWindowLimiter(
+    EMAILS_PER_USER,
+    EMAIL_WINDOW_MS,
+  );
 
-  constructor(private readonly reportsService: ReportsService) {
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly prisma: PrismaService,
+  ) {
     const host = process.env.SMTP_HOST;
     const port = Number(process.env.SMTP_PORT);
     const secure = process.env.SMTP_SECURE === 'true';
@@ -46,7 +70,62 @@ export class MailService {
     });
   }
 
-  async sendReportEmail(dto: SendReportEmailDto) {
+  /**
+   * Un usuario solo puede enviarse reportes a sí mismo; un Administrator,
+   * a cualquier dirección. Sin destinatario, va al correo de quien lo pide.
+   */
+  private async resolveRecipient(
+    recipient: string | undefined,
+    requester: ReportEmailRequester,
+  ): Promise<string> {
+    const user = await this.prisma.app_user.findUnique({
+      where: {
+        user_id: requester.userId,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException(
+        'El usuario no existe o está desactivado',
+      );
+    }
+
+    if (
+      recipient !== undefined &&
+      recipient.toLowerCase() !== user.email.toLowerCase() &&
+      requester.role !== 'Administrator'
+    ) {
+      throw new ForbiddenException(
+        `Solo puedes enviar reportes a tu propio correo (${user.email})`,
+      );
+    }
+
+    return recipient ?? user.email;
+  }
+
+  async sendReportEmail(
+    dto: SendReportEmailDto,
+    requester: ReportEmailRequester,
+  ) {
+    const recipient = await this.resolveRecipient(
+      dto.recipient,
+      requester,
+    );
+    const limitKey = String(requester.userId);
+    const blockedFor = this.emailsByUser.blockedFor(limitKey);
+
+    if (blockedFor > 0) {
+      throw tooManyRequests(
+        'Has pedido demasiados reportes por correo',
+        blockedFor,
+      );
+    }
+
+    this.emailsByUser.hit(limitKey);
+
     const report = await this.generateReport(dto);
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER;
@@ -60,7 +139,7 @@ export class MailService {
     try {
       await this.transporter.sendMail({
         from,
-        to: dto.recipient,
+        to: recipient,
         subject: `Reporte BNSM: ${report.title}`,
         text: [
           'Hola,',
@@ -82,7 +161,7 @@ export class MailService {
 
       return {
         message: 'Reporte enviado correctamente por correo.',
-        recipient: dto.recipient,
+        recipient,
         report: report.title,
         filename: report.filename,
       };

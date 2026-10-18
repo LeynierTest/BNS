@@ -18,8 +18,11 @@ export enum ReportType {
 }
 
 export class SendReportEmailDto {
+  // Opcional: por defecto, el correo de quien lo pide. Solo un
+  // Administrator puede enviarlo a otra dirección.
+  @IsOptional()
   @IsEmail()
-  recipient!: string;
+  recipient?: string;
 
   @IsEnum(ReportType)
   report!: ReportType;
