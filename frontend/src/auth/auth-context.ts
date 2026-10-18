@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import type { RegistrationData } from './registration-rules';
 
 export type AuthUser = {
   user_id: number;
@@ -15,6 +16,8 @@ export type AuthContextValue = {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
+  /** Crea una cuenta User desde el login y deja su sesión iniciada. */
+  register: (data: RegistrationData) => Promise<void>;
   logout: () => Promise<void>;
   updatePhoto: (photo: File) => Promise<void>;
   removePhoto: () => Promise<void>;

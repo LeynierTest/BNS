@@ -22,6 +22,12 @@ const LoginPage = lazy(() =>
   })),
 );
 
+const RegisterPage = lazy(() =>
+  import('./pages/RegisterPage').then((module) => ({
+    default: module.RegisterPage,
+  })),
+);
+
 const ModulePlaceholderPage = lazy(() =>
   import('./pages/ModulePlaceholderPage').then((module) => ({
     default: module.ModulePlaceholderPage,
@@ -106,6 +112,11 @@ function App() {
             <Route
               path="/login"
               element={<LoginPage />}
+            />
+
+            <Route
+              path="/register"
+              element={<RegisterPage />}
             />
 
             <Route element={<ProtectedRoute />}>
