@@ -111,7 +111,6 @@ describe('Validación de entrada (e2e)', () => {
           position: 'Pitcher',
           at_bats: 10,
           hits: 3,
-          batting_average: 0.3,
         })
         .expect(400);
 
@@ -120,20 +119,55 @@ describe('Validación de entrada (e2e)', () => {
       );
     });
 
-    it('jugador con promedio mayor que 1 → 400', async () => {
-      await admin
+    function batterPayload(overrides: Record<string, unknown> = {}) {
+      return {
+        name: 'Jugador',
+        number: 31,
+        years_on_team: 1,
+        team_id: ref.awayTeamId,
+        position: 'Receptor',
+        at_bats: 7,
+        hits: 2,
+        ...overrides,
+      };
+    }
+
+    it('jugador que envía su promedio de bateo (se calcula) → 400', async () => {
+      const response = await admin
         .post('/players')
-        .send({
-          name: 'Jugador',
-          number: 31,
-          years_on_team: 1,
-          team_id: ref.awayTeamId,
-          position: 'Receptor',
-          at_bats: 10,
-          hits: 3,
-          batting_average: 1.5,
-        })
+        .send(batterPayload({ batting_average: 0.5 }))
         .expect(400);
+
+      expect(response.body.message).toContain(
+        'property batting_average should not exist',
+      );
+    });
+
+    it('jugador con más hits que veces al bate → 400', async () => {
+      const response = await admin
+        .post('/players')
+        .send(batterPayload({ at_bats: 3, hits: 4 }))
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'hits no puede ser mayor que at_bats',
+      );
+    });
+
+    it('el promedio de bateo es hits / veces al bate (redondeado a 3 decimales)', async () => {
+      const created = await admin
+        .post('/players')
+        .send(batterPayload({ number: 32 }))
+        .expect(201);
+      // 2 / 7 = 0.2857…
+      expect(Number(created.body.batting_average)).toBe(0.286);
+
+      const updated = await admin
+        .patch(`/players/${created.body.team_member_id}`)
+        .send({ hits: 7 })
+        .expect(200);
+
+      expect(Number(updated.body.batting_average)).toBe(1);
     });
 
     it('usuario con contraseña de menos de 6 caracteres → 400', async () => {

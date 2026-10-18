@@ -11,7 +11,7 @@ export interface PlayerFormData {
   innings_pitched: number | null;
   hits: number | null;
   runs_allowed: number | null;
-  batting_average: number | null;
+  // Sin batting_average: lo calcula el backend (hits / at_bats).
   hits_allowed: number | null;
   walks_allowed: number | null;
   strikeouts: number | null;

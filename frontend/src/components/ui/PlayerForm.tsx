@@ -4,7 +4,10 @@ import type { FormEvent } from 'react';
 import { Button } from './Button';
 import { Input } from './Input';
 import type { PlayerFormData } from '../../api/players';
-import { isBaseballInnings } from '../../types/player';
+import {
+  computeBattingAverage,
+  isBaseballInnings,
+} from '../../types/player';
 import type { Team } from '../../types/team';
 import './PlayerForm.css';
 
@@ -27,7 +30,6 @@ type FormValues = {
   innings_pitched: string;
   hits: string;
   runs_allowed: string;
-  batting_average: string;
   hits_allowed: string;
   walks_allowed: string;
   strikeouts: string;
@@ -118,7 +120,6 @@ export function PlayerForm({
       initialValues?.runs_allowed !== undefined
         ? String(initialValues.runs_allowed)
         : '',
-    batting_average: toInputValue(initialValues?.batting_average),
     hits_allowed: toInputValue(initialValues?.hits_allowed),
     walks_allowed: toInputValue(initialValues?.walks_allowed),
     strikeouts: toInputValue(initialValues?.strikeouts),
@@ -129,6 +130,15 @@ export function PlayerForm({
   const [errors, setErrors] = useState<FormErrors>({});
 
   const isPitcher = values.position === 'Lanzador';
+
+  // El backend calcula el promedio (hits / veces al bate); aquí solo se
+  // muestra cómo quedará.
+  const previewAverage =
+    values.at_bats.trim() !== '' && values.hits.trim() !== ''
+      ? computeBattingAverage(Number(values.at_bats), Number(values.hits))
+      : null;
+  const battingAveragePreview =
+    previewAverage === null ? '—' : previewAverage.toFixed(3);
 
   const updateValue = (field: keyof FormValues, value: string) => {
     setValues((current) => ({
@@ -179,25 +189,6 @@ export function PlayerForm({
 
     if (!values.position) {
       nextErrors.position = t('players.form.validation.required');
-    }
-
-    // El promedio del lanzador es su ERA, que calcula el backend.
-    if (!isPitcher && values.batting_average.trim() === '') {
-      nextErrors.batting_average = t(
-        'players.form.validation.required',
-      );
-    } else if (!isPitcher) {
-      const average = Number(values.batting_average);
-
-      if (
-        Number.isNaN(average) ||
-        average < 0 ||
-        average > 1
-      ) {
-        nextErrors.batting_average = t(
-          'players.form.validation.average',
-        );
-      }
     }
 
     if (isPitcher) {
@@ -266,6 +257,13 @@ export function PlayerForm({
         nextErrors.hits = t(
           'players.form.validation.nonNegativeInteger',
         );
+      } else if (
+        !nextErrors.at_bats &&
+        Number(values.hits) > Number(values.at_bats)
+      ) {
+        nextErrors.hits = t(
+          'players.form.validation.hitsExceedAtBats',
+        );
       }
     }
 
@@ -295,9 +293,6 @@ export function PlayerForm({
       runs_allowed: isPitcher
         ? Number(values.runs_allowed)
         : null,
-      batting_average: isPitcher
-        ? null
-        : Number(values.batting_average),
       hits_allowed: isPitcher ? Number(values.hits_allowed) : null,
       walks_allowed: isPitcher ? Number(values.walks_allowed) : null,
       strikeouts: isPitcher ? Number(values.strikeouts) : null,
@@ -479,25 +474,13 @@ export function PlayerForm({
           </>
         )}
 
-        {isPitcher ? (
-          <p className="player-form-note">
-            {t('players.form.pitcherAverageNote')}
-          </p>
-        ) : (
-          <Input
-            label={t('players.form.battingAverage')}
-            type="number"
-            min="0"
-            max="1"
-            step="0.001"
-            value={values.batting_average}
-            onChange={(event) =>
-              updateValue('batting_average', event.target.value)
-            }
-            error={errors.batting_average}
-            disabled={loading}
-          />
-        )}
+        <p className="player-form-note">
+          {isPitcher
+            ? t('players.form.pitcherAverageNote')
+            : t('players.form.battingAverageNote', {
+                average: battingAveragePreview,
+              })}
+        </p>
       </div>
 
       {serverError && (

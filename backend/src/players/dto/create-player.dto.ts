@@ -58,13 +58,8 @@ export class CreatePlayerDto {
   @Min(0)
   runs_allowed: number | null;
 
-  // Promedio de bateo: solo para quienes no son lanzadores (el promedio
-  // del lanzador es su ERA, que se calcula).
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 3 })
-  @Min(0)
-  @Max(1)
-  batting_average?: number | null;
+  // Sin batting_average: lo calcula la base (hits / at_bats; el promedio
+  // del lanzador es su ERA). Enviarlo responde 400 (forbidNonWhitelisted).
 
   // Estadísticas solo de lanzador (WHIP, K/9, BB/9 y FIP).
   @IsOptional()
