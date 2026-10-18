@@ -13,6 +13,7 @@ import {
   searchMatches,
   updateMatch,
 } from '../api/matches';
+import type { MatchSearchFilters } from '../api/matches';
 import { connectMatchesEvents } from '../api/matches-events';
 import { getTeams } from '../api/teams';
 import { getStadiums } from '../api/stadiums';
@@ -53,7 +54,6 @@ export default function MatchesPage() {
     user?.role === 'Administrator';
 
   const [matches, setMatches] = useState<Match[]>([]);
-  const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [stadiums, setStadiums] = useState<Stadium[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
@@ -66,7 +66,11 @@ export default function MatchesPage() {
   const [phaseFilter, setPhaseFilter] = useState('');
   const [matchDateFilter, setMatchDateFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<MatchSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] =
@@ -104,7 +108,9 @@ export default function MatchesPage() {
           phasesData,
           qualificationData,
         ] = await Promise.all([
-          getMatches(),
+          appliedFilters
+            ? searchMatches(appliedFilters)
+            : getMatches(),
           getTeams(),
           getStadiums(),
           getPhases(),
@@ -116,7 +122,6 @@ export default function MatchesPage() {
         }
 
         setMatches(matchesData);
-        setAllMatches(matchesData);
         setTeams(teamsData);
         setStadiums(stadiumsData);
         setPhases(phasesData);
@@ -134,6 +139,7 @@ export default function MatchesPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -143,7 +149,7 @@ export default function MatchesPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [appliedFilters, reloadCount, t]);
 
   useEffect(() => {
     const disconnect =
@@ -173,31 +179,15 @@ export default function MatchesPage() {
     phaseFilter.trim() !== '' ||
     matchDateFilter.trim() !== '';
 
-  async function handleSearch() {
+  function handleSearch() {
     setIsSearching(true);
-    setLoadError(null);
-    setHasSearched(true);
-
-    try {
-      const results = await searchMatches({
-        away_team: team1Filter,
-        home_team: team2Filter,
-        stadium: stadiumFilter,
-        phase: phaseFilter,
-        match_date: matchDateFilter,
-      });
-
-      setMatches(results);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('matches.loadError'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+    setAppliedFilters({
+      away_team: team1Filter,
+      home_team: team2Filter,
+      stadium: stadiumFilter,
+      phase: phaseFilter,
+      match_date: matchDateFilter,
+    });
   }
 
   function clearFilters() {
@@ -206,8 +196,7 @@ export default function MatchesPage() {
     setStadiumFilter('');
     setPhaseFilter('');
     setMatchDateFilter('');
-    setHasSearched(false);
-    setMatches(allMatches);
+    setAppliedFilters(null);
   }
 
   function openCreateModal() {
@@ -417,7 +406,7 @@ export default function MatchesPage() {
         }
       />
 
-      {!loading && !loadError && (
+      {!loading && (!loadError || hasSearched) && (
         <div className="matches-toolbar">
           <div className="matches-filters">
             <Input
@@ -477,7 +466,7 @@ export default function MatchesPage() {
           <div className="matches-toolbar-footer">
             <Button
               type="button"
-              onClick={() => void handleSearch()}
+              onClick={handleSearch}
               disabled={isSearching}
             >
               {isSearching
@@ -493,7 +482,7 @@ export default function MatchesPage() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => void clearFilters()}
+                onClick={clearFilters}
                 disabled={isSearching}
               >
                 {t('matches.clearFilters')}

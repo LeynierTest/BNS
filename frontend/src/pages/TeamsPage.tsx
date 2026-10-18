@@ -10,6 +10,7 @@ import {
   searchTeams,
   updateTeam,
 } from '../api/teams';
+import type { TeamSearchFilters } from '../api/teams';
 import { getApiErrorMessage } from '../api/api-error';
 import { useAuth } from '../auth/use-auth';
 import { Badge } from '../components/ui/Badge';
@@ -52,7 +53,11 @@ export function TeamsPage() {
   const [participatedFilter, setParticipatedFilter] = useState('');
   const [wonFilter, setWonFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<TeamSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadCount, setReloadCount] = useState(0);
@@ -81,7 +86,9 @@ export function TeamsPage() {
 
     async function loadTeams() {
       try {
-        const data = await getTeams();
+        const data = appliedFilters
+          ? await searchTeams(appliedFilters)
+          : await getTeams();
 
         if (ignore) {
           return;
@@ -89,13 +96,16 @@ export function TeamsPage() {
 
         setTeams(data);
         setError('');
-      } catch {
+      } catch (requestError) {
         if (!ignore) {
-          setError(t('teams.error'));
+          setError(
+            getApiErrorMessage(requestError, t('teams.error')),
+          );
         }
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -105,7 +115,7 @@ export function TeamsPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [appliedFilters, reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectTeamsEvents({
@@ -117,10 +127,14 @@ export function TeamsPage() {
     return disconnect;
   }, []);
 
+  function reloadTeams() {
+    setReloadCount((count) => count + 1);
+  }
+
   function retryLoad() {
     setLoading(true);
     setError('');
-    setReloadCount((count) => count + 1);
+    reloadTeams();
   }
 
   const hasActiveFilters =
@@ -131,73 +145,44 @@ export function TeamsPage() {
     participatedFilter.trim() !== '' ||
     wonFilter.trim() !== '';
 
-  async function handleSearch() {
+  function handleSearch() {
     setIsSearching(true);
-    setError('');
-
-    try {
-      const data = await searchTeams({
-        ...(nameFilter.trim()
-          ? { name: nameFilter.trim() }
-          : {}),
-        ...(provinceFilter.trim()
-          ? { province: provinceFilter.trim() }
-          : {}),
-        ...(colorFilter.trim()
-          ? { color: colorFilter.trim() }
-          : {}),
-        ...(mascotFilter.trim()
-          ? { mascot: mascotFilter.trim() }
-          : {}),
-        ...(participatedFilter.trim()
-          ? {
-              championships_participated:
-                Number(participatedFilter),
-            }
-          : {}),
-        ...(wonFilter.trim()
-          ? {
-              championships_won:
-                Number(wonFilter),
-            }
-          : {}),
-      });
-
-      setTeams(data);
-      setHasSearched(true);
-    } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          t('teams.error'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+    setAppliedFilters({
+      ...(nameFilter.trim()
+        ? { name: nameFilter.trim() }
+        : {}),
+      ...(provinceFilter.trim()
+        ? { province: provinceFilter.trim() }
+        : {}),
+      ...(colorFilter.trim()
+        ? { color: colorFilter.trim() }
+        : {}),
+      ...(mascotFilter.trim()
+        ? { mascot: mascotFilter.trim() }
+        : {}),
+      ...(participatedFilter.trim()
+        ? {
+            championships_participated:
+              Number(participatedFilter),
+          }
+        : {}),
+      ...(wonFilter.trim()
+        ? {
+            championships_won:
+              Number(wonFilter),
+          }
+        : {}),
+    });
   }
 
-  async function clearFilters() {
+  function clearFilters() {
     setNameFilter('');
     setProvinceFilter('');
     setColorFilter('');
     setMascotFilter('');
     setParticipatedFilter('');
     setWonFilter('');
-    setError('');
-
-    try {
-      const data = await searchTeams({});
-      setTeams(data);
-      setHasSearched(true);
-    } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          t('teams.error'),
-        ),
-      );
-    }
+    setAppliedFilters(null);
   }
 
   const isAdministrator =
@@ -224,15 +209,10 @@ export function TeamsPage() {
     setFormError('');
 
     try {
-      const createdTeam = await createTeam(data);
-
-      setTeams((currentTeams) =>
-        [...currentTeams, createdTeam].sort(
-          (a, b) => a.team_id - b.team_id,
-        ),
-      );
+      await createTeam(data);
 
       setIsCreateModalOpen(false);
+      reloadTeams();
     } catch (requestError) {
       setFormError(
         getApiErrorMessage(
@@ -270,14 +250,8 @@ export function TeamsPage() {
     try {
       await deleteTeam(deletingTeam.team_id);
 
-      setTeams((currentTeams) =>
-        currentTeams.filter(
-          (team) =>
-            team.team_id !== deletingTeam.team_id,
-        ),
-      );
-
       setDeletingTeam(null);
+      reloadTeams();
     } catch (requestError) {
       setDeleteError(
         getApiErrorMessage(
@@ -315,20 +289,13 @@ export function TeamsPage() {
     setEditFormError('');
 
     try {
-      const updatedTeam = await updateTeam(
+      await updateTeam(
         editingTeam.team_id,
         data,
       );
 
-      setTeams((currentTeams) =>
-        currentTeams.map((team) =>
-          team.team_id === updatedTeam.team_id
-            ? updatedTeam
-            : team,
-        ),
-      );
-
       setEditingTeam(null);
+      reloadTeams();
     } catch (requestError) {
       setEditFormError(
         getApiErrorMessage(
@@ -429,7 +396,7 @@ export function TeamsPage() {
 
         <div className="teams-toolbar-footer">
           <Button
-            onClick={() => void handleSearch()}
+            onClick={handleSearch}
             disabled={isSearching}
           >
             {isSearching

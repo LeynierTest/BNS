@@ -9,7 +9,10 @@ import {
   searchPlayers,
   updatePlayer,
 } from '../api/players';
-import type { PlayerFormData } from '../api/players';
+import type {
+  PlayerFormData,
+  PlayerSearchFilters,
+} from '../api/players';
 import { getTeams } from '../api/teams';
 import { getApiErrorMessage } from '../api/api-error';
 
@@ -47,7 +50,12 @@ export default function PlayersPage() {
   const [nameFilter, setNameFilter] = useState('');
   const [teamFilter, setTeamFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
-  const [hasSearched, setHasSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<PlayerSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,7 +81,9 @@ export default function PlayersPage() {
 
     async function loadData() {
       try {
-        const playersPromise = getPlayers();
+        const playersPromise = appliedFilters
+          ? searchPlayers(appliedFilters)
+          : getPlayers();
 
         const [playerData, teamData] = await Promise.all([
           playersPromise,
@@ -94,6 +104,7 @@ export default function PlayersPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -103,7 +114,7 @@ export default function PlayersPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, isAdministrator, t]);
+  }, [appliedFilters, reloadCount, isAdministrator, t]);
 
   useEffect(() => {
     const disconnect = connectPlayersEvents({
@@ -115,10 +126,14 @@ export default function PlayersPage() {
     return disconnect;
   }, []);
 
+  const reloadPlayers = () => {
+    setReloadCount((count) => count + 1);
+  };
+
   const retryLoad = () => {
     setLoading(true);
     setError('');
-    setReloadCount((count) => count + 1);
+    reloadPlayers();
   };
 
   const hasActiveFilters =
@@ -127,49 +142,27 @@ export default function PlayersPage() {
     teamFilter.trim() !== '' ||
     positionFilter.trim() !== '';
 
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      setError('');
+  const handleSearch = () => {
+    const normalizedNumber = numberFilter.trim();
 
-      const normalizedNumber = numberFilter.trim();
-      const playerData = await searchPlayers({
-        number:
-          normalizedNumber !== ''
-            ? Number(normalizedNumber)
-            : undefined,
-        name: nameFilter.trim() || undefined,
-        team: teamFilter.trim() || undefined,
-        position: positionFilter.trim() || undefined,
-      });
-
-      setPlayers(playerData);
-      setHasSearched(true);
-    } catch (err) {
-      setError(getApiErrorMessage(err, t('players.loadError')));
-    } finally {
-      setLoading(false);
-    }
+    setIsSearching(true);
+    setAppliedFilters({
+      number:
+        normalizedNumber !== ''
+          ? Number(normalizedNumber)
+          : undefined,
+      name: nameFilter.trim() || undefined,
+      team: teamFilter.trim() || undefined,
+      position: positionFilter.trim() || undefined,
+    });
   };
 
-  const clearFilters = async () => {
+  const clearFilters = () => {
     setNumberFilter('');
     setNameFilter('');
     setTeamFilter('');
     setPositionFilter('');
-    setHasSearched(false);
-
-    try {
-      setLoading(true);
-      setError('');
-
-      const playerData = await getPlayers();
-      setPlayers(playerData);
-    } catch (err) {
-      setError(getApiErrorMessage(err, t('players.loadError')));
-    } finally {
-      setLoading(false);
-    }
+    setAppliedFilters(null);
   };
 
   const openCreateModal = () => {
@@ -191,15 +184,10 @@ export default function PlayersPage() {
       setCreating(true);
       setCreateError('');
 
-      const createdPlayer = await createPlayer(data);
-
-      setPlayers((current) =>
-        [...current, createdPlayer].sort(
-          (a, b) => a.team_member_id - b.team_member_id,
-        ),
-      );
+      await createPlayer(data);
 
       setCreateModalOpen(false);
+      reloadPlayers();
     } catch (err) {
       setCreateError(
         getApiErrorMessage(err, t('players.loadError')),
@@ -252,20 +240,13 @@ export default function PlayersPage() {
       setUpdating(true);
       setUpdateError('');
 
-      const updatedPlayer = await updatePlayer(
+      await updatePlayer(
         editingPlayer.team_member_id,
         data,
       );
 
-      setPlayers((current) =>
-        current.map((player) =>
-          player.team_member_id === updatedPlayer.team_member_id
-            ? updatedPlayer
-            : player,
-        ),
-      );
-
       setEditingPlayer(null);
+      reloadPlayers();
     } catch (err) {
       setUpdateError(
         getApiErrorMessage(err, t('players.loadError')),
@@ -300,15 +281,8 @@ export default function PlayersPage() {
 
       await deletePlayer(deletingPlayer.team_member_id);
 
-      setPlayers((current) =>
-        current.filter(
-          (player) =>
-            player.team_member_id !==
-            deletingPlayer.team_member_id,
-        ),
-      );
-
       setDeletingPlayer(null);
+      reloadPlayers();
     } catch (err) {
       setDeleteError(
         getApiErrorMessage(err, t('players.deleteError')),
@@ -448,9 +422,12 @@ export default function PlayersPage() {
         <div className="players-toolbar-footer">
           <Button
             type="button"
-            onClick={() => void handleSearch()}
+            onClick={handleSearch}
+            disabled={isSearching}
           >
-            {t('players.search')}
+            {isSearching
+              ? t('common.loading')
+              : t('players.search')}
           </Button>
           <div className="players-count">
             {players.length}
@@ -461,6 +438,7 @@ export default function PlayersPage() {
               variant="secondary"
               type="button"
               onClick={clearFilters}
+              disabled={isSearching}
             >
               {t('players.clearFilters')}
             </Button>
