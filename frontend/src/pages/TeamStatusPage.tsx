@@ -15,9 +15,11 @@ import { getApiErrorMessage } from '../api/api-error';
 import './TeamStatusPage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { useSelectedSeason } from '../season/use-season';
 
 export function TeamStatusPage() {
   const { t } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamId, setTeamId] = useState('');
@@ -85,7 +87,7 @@ export function TeamStatusPage() {
     setError(null);
 
     try {
-      const data = await getTeamStatus(Number(teamId));
+      const data = await getTeamStatus(Number(teamId), seasonId);
       setStatus(data);
       setHasSearched(true);
     } catch (err) {
@@ -225,13 +227,14 @@ export function TeamStatusPage() {
           <>
             <div className="report-actions">
               <PdfDownloadButton
-                endpoint={`/reports/pdf/team-status/${teamId}`}
+                endpoint={`/reports/pdf/team-status/${teamId}?season_id=${seasonId}`}
                 filename="estado-del-equipo.pdf"
               />
               <EmailReportButton
                 report="team-status"
                 params={{
                   teamId: Number(teamId),
+                  seasonId,
                 }}
               />
             </div>

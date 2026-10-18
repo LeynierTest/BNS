@@ -62,6 +62,42 @@ export const resources = {
         logout: 'Cerrar sesión',
       },
 
+      seasons: {
+        loading: 'Cargando temporadas...',
+        loadError: 'No se pudieron cargar las temporadas.',
+        empty: 'No hay ninguna temporada creada.',
+        viewing: 'Temporada',
+        changeInDashboard: 'La temporada se cambia desde el Dashboard.',
+        panelTitle: 'Temporada',
+        selectLabel: 'Temporada que se muestra',
+        createOption: '+ Crear nueva temporada',
+        started: 'En juego',
+        notStarted: 'Sin empezar',
+        facts: '{{teams}} equipos inscritos · {{phases}} fases · {{matches}} partidos',
+        editTeams: 'Editar equipos inscritos',
+        editTeamsTitle: 'Equipos inscritos en la temporada',
+        lockedHint: 'Ya empezó: sus equipos inscritos no cambian.',
+        createTitle: 'Nueva temporada',
+        create: 'Crear temporada',
+        createNote: 'La temporada empieza vacía: sin fases ni partidos. Equipos, peloteros y estadios se conservan.',
+        series: 'Serie',
+        newSeries: '+ Nueva Serie',
+        seriesName: 'Nombre de la Serie',
+        seriesNamePlaceholder: 'p. ej. Serie Nacional de Béisbol',
+        name: 'Nombre de la temporada',
+        namePlaceholder: 'p. ej. Temporada 2027',
+        teams: 'Equipos que la juegan',
+        selectAll: 'Todos',
+        selectNone: 'Ninguno',
+        createError: 'No se pudo crear la temporada.',
+        updateError: 'No se pudieron guardar los equipos inscritos.',
+        validation: {
+          nameRequired: 'El nombre de la temporada es obligatorio.',
+          seriesNameRequired: 'El nombre de la Serie es obligatorio.',
+          minTeams: 'Una temporada necesita al menos 2 equipos.',
+        },
+      },
+
       header: {
         league: 'Serie Nacional de Béisbol',
         title: 'Portal de información',
@@ -539,6 +575,8 @@ export const resources = {
         noResults:
           'No encontramos equipos con esa búsqueda.',
         newTeam: 'Nuevo equipo',
+        seasonStarted:
+          'La temporada {{season}} ya empezó: no se pueden añadir equipos. Crea una temporada nueva desde el Dashboard.',
         viewOnly: 'Solo consulta',
         teamCount: 'equipos',
         clearFilters: 'Limpiar filtros',
@@ -828,7 +866,7 @@ export const resources = {
           stadiums: 'Estadios',
 
           teamsDescription:
-            'participantes registrados',
+            'inscritos en la temporada',
           playersDescription:
             'peloteros registrados',
           matchesDescription:
@@ -936,6 +974,42 @@ export const resources = {
         reportAllStar: 'All-Star team',
         users: 'Users',
         logout: 'Sign out',
+      },
+
+      seasons: {
+        loading: 'Loading seasons...',
+        loadError: 'The seasons could not be loaded.',
+        empty: 'There are no seasons yet.',
+        viewing: 'Season',
+        changeInDashboard: 'Change the season from the Dashboard.',
+        panelTitle: 'Season',
+        selectLabel: 'Season shown',
+        createOption: '+ Create new season',
+        started: 'In play',
+        notStarted: 'Not started',
+        facts: '{{teams}} enrolled teams · {{phases}} phases · {{matches}} games',
+        editTeams: 'Edit enrolled teams',
+        editTeamsTitle: 'Teams enrolled in the season',
+        lockedHint: 'Already started: its enrolled teams cannot change.',
+        createTitle: 'New season',
+        create: 'Create season',
+        createNote: 'The season starts empty: no phases or games. Teams, players and stadiums are kept.',
+        series: 'Series',
+        newSeries: '+ New Series',
+        seriesName: 'Series name',
+        seriesNamePlaceholder: 'e.g. National Baseball Series',
+        name: 'Season name',
+        namePlaceholder: 'e.g. Season 2027',
+        teams: 'Teams that play it',
+        selectAll: 'All',
+        selectNone: 'None',
+        createError: 'The season could not be created.',
+        updateError: 'The enrolled teams could not be saved.',
+        validation: {
+          nameRequired: 'The season name is required.',
+          seriesNameRequired: 'The Series name is required.',
+          minTeams: 'A season needs at least 2 teams.',
+        },
       },
 
       header: {
@@ -1476,6 +1550,8 @@ export const resources = {
         noResults:
           'We could not find any teams matching your search.',
         newTeam: 'New team',
+        seasonStarted:
+          'The season {{season}} has already started: teams cannot be added. Create a new season from the Dashboard.',
         viewOnly: 'View only',
         teamCount: 'teams',
         clearFilters: 'Clear filters',
@@ -1706,7 +1782,7 @@ export const resources = {
           stadiums: 'Stadiums',
 
           teamsDescription:
-            'registered participants',
+            'enrolled in the season',
           playersDescription:
             'registered players',
           matchesDescription:

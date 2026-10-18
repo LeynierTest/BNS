@@ -13,9 +13,11 @@ import type { Standing } from '../types/standing';
 import './StandingsPage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { useSelectedSeason } from '../season/use-season';
 
 export function StandingsPage() {
   const { t } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const [standings, setStandings] = useState<Standing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export function StandingsPage() {
         setLoading(true);
         setError('');
 
-        const data = await getStandings();
+        const data = await getStandings(seasonId);
 
         if (active) {
           setStandings(data);
@@ -55,7 +57,7 @@ export function StandingsPage() {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [seasonId, t]);
 
   const columns = useMemo<DataTableColumn<Standing>[]>(
     () => [
@@ -119,10 +121,13 @@ export function StandingsPage() {
           {standings.length > 0 ? (
             <div className="report-actions">
               <PdfDownloadButton
-                endpoint="/reports/pdf/standings"
+                endpoint={`/reports/pdf/standings?season_id=${seasonId}`}
                 filename="tabla-posiciones.pdf"
               />
-              <EmailReportButton report="standings" />
+              <EmailReportButton
+                report="standings"
+                params={{ seasonId }}
+              />
             </div>
           ) : null}
 

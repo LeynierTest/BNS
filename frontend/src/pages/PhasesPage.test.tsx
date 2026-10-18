@@ -72,10 +72,10 @@ describe('PhasesPage · búsqueda y recargas', () => {
   it('busca con los filtros escritos', async () => {
     await searchByName('Segunda');
 
-    expect(api.searchPhases).toHaveBeenCalledWith({
-      name: 'Segunda',
-      active_date: undefined,
-    });
+    expect(api.searchPhases).toHaveBeenCalledWith(
+      { name: 'Segunda', active_date: undefined },
+      1,
+    );
     expect(screen.getByText('Segunda Ronda')).toBeTruthy();
   });
 
@@ -88,10 +88,10 @@ describe('PhasesPage · búsqueda y recargas', () => {
     });
 
     await waitFor(() => {
-      expect(api.searchPhases).toHaveBeenCalledWith({
-        name: 'Segunda',
-        active_date: undefined,
-      });
+      expect(api.searchPhases).toHaveBeenCalledWith(
+        { name: 'Segunda', active_date: undefined },
+        1,
+      );
     });
     expect(screen.queryByText('Primera Ronda')).toBeNull();
     expect(screen.getByText('Segunda Ronda')).toBeTruthy();
