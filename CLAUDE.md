@@ -168,6 +168,22 @@ Piezas transversales (no repetir su lógica en cada módulo):
 - Posiciones de peloteros: lista canónica en `players/player-positions.ts`,
   igual a la de `PlayerForm`; `isPitcherPosition` replica la regla del trigger
   `validate_player_stats`.
+- **Estadísticas de lanzador** — decisiones del equipo (2026-10-18):
+  - El lanzador registra entradas lanzadas, carreras permitidas (cuentan como
+    carreras limpias), hits permitidos, bases por bolas, ponches, jonrones
+    permitidos y pelotazos: obligatorios en lanzadores y prohibidos en el
+    resto (DTO, `PlayersService` y trigger). No lleva promedio de bateo: su
+    "promedio" es el ERA, que se calcula.
+  - Entradas lanzadas en notación de béisbol (90.2 = 90 ⅔; solo .0, .1, .2):
+    `players/innings-pitched.ts` (espejo en `frontend/src/types/player.ts`),
+    CHECK `player_innings_pitched_notation_ck` (`NOT VALID`) y
+    `innings_to_decimal()` en SQL.
+  - `get_pitching_stats()` calcula ERA, WHIP, K/9, BB/9 y FIP (la constante
+    del FIP sale de los totales de la liga). `get_all_star_team()` elige al
+    lanzador por menor ERA (desempate: más entradas, luego nombre); las demás
+    estadísticas son informativas. Sin entradas, o con una fila antigua en
+    décimas, no hay estadísticas y el lanzador no compite. No hay mínimo de
+    entradas: un lanzador con pocas entradas y ERA bajo puede ganar.
 - **Regla 8/4/2 (equipos activos por fase)** — decisiones del equipo
   (2026-10-18):
   - Las fases son exactamente las del enunciado, una vez cada una y en orden
@@ -299,7 +315,7 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 93 pruebas unitarias y 85 e2e.
+  pasan `oxlint` sin warnings; backend con 114 pruebas unitarias y 98 e2e.
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).
 - Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para
@@ -317,11 +333,14 @@ Notas de arranque:
   --rolled-back 20261018120000_add_phase_qualification` y `npx prisma migrate
   deploy`. Las fases antiguas con un nombre libre siguen ahí, pero la regla
   8/4/2 las ignora y no se pueden editar sin renombrarlas a una de la lista.
-- Reporte "Equipo todos estrellas": el sistema trata el "promedio" como
-  promedio de bateo en [0, 1] para todas las posiciones y elige el mayor. El
-  enunciado no define la fórmula; si para lanzadores debe usarse otra métrica
-  (p. ej. carreras limpias, donde gana el menor), hay que cambiar
-  `get_all_star_team()` con una migración nueva.
+- Migración `20261018180000_add_pitching_stats`: los lanzadores anteriores
+  quedan con los cinco campos nuevos vacíos. Siguen compitiendo por ERA,
+  pero para editarlos hay que completarlos. Si alguno usó décimas en las
+  entradas (p. ej. 45.5), queda fuera de las estadísticas hasta corregirlo.
+- Los comandos de Prisma (`migrate deploy/status/diff`) leen `backend/.env`
+  a través de `prisma.config.ts`: para trabajar sobre una base de pruebas hay
+  que fijar `DATABASE_URL` en el mismo comando, o se aplicarán en la base de
+  desarrollo.
 - `backend/.oxlintrc.json` tiene `typescript/no-floating-promises: error` —
   cualquier promesa sin `await`/`.catch()` debe tratarse como error de lint,
   no ignorarse.
