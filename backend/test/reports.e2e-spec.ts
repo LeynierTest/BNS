@@ -116,8 +116,27 @@ describe('Reportes del enunciado (e2e)', () => {
     await createBatter(admin, ids.industriales, 'Jardinero I', 10, 'Jardinero', 0.32);
     await createBatter(admin, ids.santiago, 'Jardinero S', 10, 'Jardinero', 0.35);
     await createBatter(admin, ids.pinar, 'Receptor P', 10, 'Receptor', 0.28);
-    await createPitcher(admin, ids.industriales, 'Lanzador I', 11, 0.15);
-    await createPitcher(admin, ids.matanzas, 'Lanzador M', 10, 0.1);
+    // Lanzador I: 90.2 entradas = 90 ⅔. ERA = 9·25 / 90.667 = 2.48 (gana);
+    // Lanzador M: ERA = 9·20 / 45 = 4.00. Constante del FIP con los totales
+    // de ambos: 9·45/135.667 − (13·11 + 3·(35+5) − 2·115)/135.667 = 2.742.
+    await createPitcher(admin, ids.industriales, 'Lanzador I', 11, {
+      innings_pitched: 90.2,
+      runs_allowed: 25,
+      hits_allowed: 80,
+      walks_allowed: 20,
+      strikeouts: 85,
+      home_runs_allowed: 6,
+      hit_batsmen: 3,
+    });
+    await createPitcher(admin, ids.matanzas, 'Lanzador M', 10, {
+      innings_pitched: 45,
+      runs_allowed: 20,
+      hits_allowed: 50,
+      walks_allowed: 15,
+      strikeouts: 30,
+      home_runs_allowed: 5,
+      hit_batsmen: 2,
+    });
   });
 
   afterAll(async () => {
@@ -267,7 +286,7 @@ describe('Reportes del enunciado (e2e)', () => {
     await agent.get('/teams/9999/status').expect(404);
   });
 
-  it('7. Equipo todos estrellas: un jugador por posición, el de mejor promedio', async () => {
+  it('7. Equipo todos estrellas: un jugador por posición, el de mejor promedio (ERA en el lanzador)', async () => {
     const allStars = await get('/players/all-star');
 
     expect(allStars).toEqual([
@@ -276,18 +295,29 @@ describe('Reportes del enunciado (e2e)', () => {
         player_name: 'Jardinero S',
         team_name: 'Santiago de Cuba',
         batting_average: 0.35,
+        pitching: null,
       },
       {
         player_position: 'Lanzador',
         player_name: 'Lanzador I',
         team_name: 'Industriales',
-        batting_average: 0.15,
+        batting_average: null,
+        // WHIP = 100/90.667; K/9 = 9·85/90.667; BB/9 = 9·20/90.667;
+        // FIP = (13·6 + 3·23 − 2·85)/90.667 + 2.742.
+        pitching: {
+          era: 2.48,
+          whip: 1.1,
+          k_per_9: 8.44,
+          bb_per_9: 1.99,
+          fip: 2.49,
+        },
       },
       {
         player_position: 'Receptor',
         player_name: 'Receptor P',
         team_name: 'Pinar del Río',
         batting_average: 0.28,
+        pitching: null,
       },
     ]);
   });

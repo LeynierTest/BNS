@@ -235,7 +235,12 @@ export default function PlayersPage() {
     innings_pitched: player.innings_pitched,
     hits: player.hits,
     runs_allowed: player.runs_allowed,
-    batting_average: Number(player.batting_average),
+    batting_average: player.batting_average,
+    hits_allowed: player.hits_allowed,
+    walks_allowed: player.walks_allowed,
+    strikeouts: player.strikeouts,
+    home_runs_allowed: player.home_runs_allowed,
+    hit_batsmen: player.hit_batsmen,
   });
 
   const handleUpdate = async (data: PlayerFormData) => {

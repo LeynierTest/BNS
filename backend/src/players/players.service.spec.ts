@@ -27,8 +27,30 @@ const pitcher = {
   hits: null,
   innings_pitched: 120.1,
   runs_allowed: 30,
-  batting_average: 0.15,
+  batting_average: null,
+  hits_allowed: 100,
+  walks_allowed: 25,
+  strikeouts: 110,
+  home_runs_allowed: 8,
+  hit_batsmen: 4,
 } satisfies CreatePlayerDto;
+
+/** Lanzador guardado antes de las estadísticas de pitcheo (sin los 5 campos). */
+const legacyPitcher = {
+  team_member_id: 7,
+  position: 'Lanzador',
+  at_bats: null,
+  hits: null,
+  innings_pitched: 90.2,
+  runs_allowed: 25,
+  batting_average: 0.15,
+  hits_allowed: null,
+  walks_allowed: null,
+  strikeouts: null,
+  home_runs_allowed: null,
+  hit_batsmen: null,
+  team_member: { team_id: 1 },
+};
 
 function createService() {
   const prisma = {
@@ -61,7 +83,8 @@ describe('isPitcherPosition', () => {
 describe('PlayersService · estadísticas según la posición', () => {
   it.each([
     ['un bateador con turnos y hits', batter],
-    ['un lanzador con entradas y carreras', pitcher],
+    ['un lanzador con todas sus estadísticas', pitcher],
+    ['un lanzador sin promedio de bateo (omitido)', { ...pitcher, batting_average: undefined }],
   ])('acepta %s', async (_label, data) => {
     const { prisma, service } = createService();
 
@@ -74,7 +97,12 @@ describe('PlayersService · estadísticas según la posición', () => {
     [
       'un lanzador sin entradas lanzadas',
       { ...pitcher, innings_pitched: null },
-      'Los lanzadores deben tener innings_pitched y runs_allowed',
+      'Los lanzadores deben tener innings_pitched',
+    ],
+    [
+      'un lanzador sin ponches ni pelotazos',
+      { ...pitcher, strikeouts: null, hit_batsmen: undefined },
+      'Los lanzadores deben tener strikeouts y hit_batsmen',
     ],
     [
       'un lanzador con turnos al bate',
@@ -82,14 +110,34 @@ describe('PlayersService · estadísticas según la posición', () => {
       'Los lanzadores no pueden tener at_bats',
     ],
     [
+      'un lanzador con promedio de bateo',
+      { ...pitcher, batting_average: 0.15 },
+      'Los lanzadores no pueden tener batting_average: su promedio es el ERA',
+    ],
+    [
+      'un lanzador con más jonrones que hits permitidos',
+      { ...pitcher, hits_allowed: 5, home_runs_allowed: 6 },
+      'home_runs_allowed no puede ser mayor que hits_allowed',
+    ],
+    [
       'un bateador sin hits',
       { ...batter, hits: null },
-      'Los jugadores que no son lanzadores deben tener at_bats y hits',
+      'Los jugadores que no son lanzadores deben tener hits',
+    ],
+    [
+      'un bateador sin promedio de bateo',
+      { ...batter, batting_average: null },
+      'Los jugadores que no son lanzadores deben tener batting_average',
     ],
     [
       'un bateador con carreras permitidas',
       { ...batter, runs_allowed: 3 },
       'Los jugadores que no son lanzadores no pueden tener runs_allowed',
+    ],
+    [
+      'un bateador con ponches',
+      { ...batter, strikeouts: 4 },
+      'Los jugadores que no son lanzadores no pueden tener strikeouts',
     ],
   ])('rechaza %s', async (_label, data, message) => {
     const { prisma, service } = createService();
@@ -116,5 +164,53 @@ describe('PlayersService · estadísticas según la posición', () => {
       service.updatePlayer(7, { position: 'Lanzador' }),
     ).rejects.toThrow(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('un lanzador antiguo debe completar sus estadísticas para editarse', async () => {
+    const { prisma, service } = createService();
+
+    prisma.player.findUnique.mockResolvedValue(legacyPitcher);
+
+    await expect(
+      service.updatePlayer(7, { name: 'Renombrado' }),
+    ).rejects.toThrow(
+      'Los lanzadores deben tener hits_allowed, walks_allowed, strikeouts, home_runs_allowed y hit_batsmen',
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('al completarlo se acepta aunque conserve un promedio de bateo antiguo, y se borra', async () => {
+    const { prisma, service } = createService();
+    const playerUpdate = jest.fn().mockResolvedValue({ team_member_id: 7 });
+
+    prisma.player.findUnique.mockResolvedValue(legacyPitcher);
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: unknown) => Promise<unknown>) =>
+        callback({
+          team_member: { update: jest.fn() },
+          player: { update: playerUpdate },
+        }),
+    );
+
+    await service.updatePlayer(7, {
+      hits_allowed: 80,
+      walks_allowed: 20,
+      strikeouts: 85,
+      home_runs_allowed: 6,
+      hit_batsmen: 3,
+    });
+
+    expect(playerUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          batting_average: null,
+          hits_allowed: 80,
+          walks_allowed: 20,
+          strikeouts: 85,
+          home_runs_allowed: 6,
+          hit_batsmen: 3,
+        },
+      }),
+    );
   });
 });

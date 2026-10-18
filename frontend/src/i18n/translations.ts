@@ -188,11 +188,23 @@ export const resources = {
         eyebrow: 'Selección',
         title: 'Equipo Todos Estrellas',
         description:
-          'Consulta el mejor jugador de cada posición según su promedio de bateo.',
+          'Consulta el mejor jugador de cada posición: el de mayor promedio de bateo y, entre los lanzadores, el de menor ERA.',
         position: 'Posición',
         player: 'Jugador',
         team: 'Equipo',
-        battingAverage: 'Promedio de bateo',
+        average: 'Promedio',
+        pitcherStats: {
+          title: 'Estadísticas del lanzador',
+          era: 'Carreras limpias por cada 9 entradas. Menor es mejor.',
+          whip: 'Hits y bases por bolas por entrada. Menor es mejor.',
+          k_per_9: 'Ponches por cada 9 entradas. Mayor es mejor.',
+          bb_per_9: 'Bases por bolas por cada 9 entradas. Menor es mejor.',
+          fip: 'Rendimiento sin depender de la defensa, en la escala del ERA. Menor es mejor.',
+          selectionNote:
+            'El lanzador se elige por menor ERA; las demás estadísticas son informativas.',
+          incomplete:
+            'Faltan datos de este lanzador (se registró antes de estas estadísticas): complétalos en Peloteros.',
+        },
         loading: 'Cargando equipo Todos Estrellas...',
         emptyTitle:
           'No hay jugadores para formar el equipo.',
@@ -680,7 +692,17 @@ export const resources = {
           position: 'Posición',
           selectPosition: 'Selecciona una posición',
           inningsPitched: 'Entradas lanzadas',
+          inningsPitchedHint:
+            'Notación de béisbol: el decimal son outs (90.2 = 90 ⅔).',
           runsAllowed: 'Carreras permitidas',
+          runsAllowedHint: 'Cuentan como carreras limpias para el ERA.',
+          hitsAllowed: 'Hits permitidos',
+          walksAllowed: 'Bases por bolas',
+          strikeouts: 'Ponches',
+          homeRunsAllowed: 'Jonrones permitidos',
+          hitBatsmen: 'Pelotazos (bateadores golpeados)',
+          pitcherAverageNote:
+            'El promedio del lanzador es su ERA (carreras permitidas × 9 / entradas lanzadas) y se calcula solo.',
           atBats: 'Veces al bate',
           hits: 'Hits',
           battingAverage: 'Promedio de bateo',
@@ -695,6 +717,10 @@ export const resources = {
               'Introduce un número mayor o igual que 0.',
             average:
               'El promedio debe estar entre 0 y 1.',
+            inningsNotation:
+              'Usa la notación de béisbol: entradas completas y .0, .1 o .2 (90.2 = 90 ⅔).',
+            homeRunsExceedHits:
+              'Los jonrones permitidos no pueden superar los hits permitidos.',
           },
         },
       },
@@ -1092,11 +1118,23 @@ export const resources = {
         eyebrow: 'Selection',
         title: 'All-Star Team',
         description:
-          'View the best player at each position according to batting average.',
+          'View the best player at each position: the highest batting average and, among pitchers, the lowest ERA.',
         position: 'Position',
         player: 'Player',
         team: 'Team',
-        battingAverage: 'Batting average',
+        average: 'Average',
+        pitcherStats: {
+          title: 'Pitcher statistics',
+          era: 'Earned runs per 9 innings. Lower is better.',
+          whip: 'Walks plus hits per inning. Lower is better.',
+          k_per_9: 'Strikeouts per 9 innings. Higher is better.',
+          bb_per_9: 'Walks per 9 innings. Lower is better.',
+          fip: 'Performance independent of defense, on the ERA scale. Lower is better.',
+          selectionNote:
+            'The pitcher is chosen by lowest ERA; the other statistics are informative.',
+          incomplete:
+            'This pitcher is missing data (recorded before these statistics): complete it in Players.',
+        },
         loading: 'Loading All-Star Team...',
         emptyTitle:
           'There are no players to form the team.',
@@ -1585,7 +1623,17 @@ export const resources = {
           position: 'Position',
           selectPosition: 'Select a position',
           inningsPitched: 'Innings pitched',
+          inningsPitchedHint:
+            'Baseball notation: the decimal counts outs (90.2 = 90 ⅔).',
           runsAllowed: 'Runs allowed',
+          runsAllowedHint: 'They count as earned runs for ERA.',
+          hitsAllowed: 'Hits allowed',
+          walksAllowed: 'Walks',
+          strikeouts: 'Strikeouts',
+          homeRunsAllowed: 'Home runs allowed',
+          hitBatsmen: 'Hit batsmen',
+          pitcherAverageNote:
+            "A pitcher's average is their ERA (runs allowed × 9 / innings pitched), calculated automatically.",
           atBats: 'At bats',
           hits: 'Hits',
           battingAverage: 'Batting average',
@@ -1601,6 +1649,10 @@ export const resources = {
               'Enter a number greater than or equal to 0.',
             average:
               'The batting average must be between 0 and 1.',
+            inningsNotation:
+              'Use baseball notation: whole innings plus .0, .1 or .2 (90.2 = 90 ⅔).',
+            homeRunsExceedHits:
+              'Home runs allowed cannot exceed hits allowed.',
           },
         },
       },

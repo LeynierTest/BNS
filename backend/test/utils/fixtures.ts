@@ -125,12 +125,23 @@ export function createBatter(
   });
 }
 
+export interface PitchingLine {
+  /** Notación de béisbol: 90.2 = 90 ⅔ entradas. */
+  innings_pitched: number;
+  runs_allowed: number;
+  hits_allowed: number;
+  walks_allowed: number;
+  strikeouts: number;
+  home_runs_allowed: number;
+  hit_batsmen: number;
+}
+
 export function createPitcher(
   agent: Agent,
   teamId: number,
   name: string,
   number: number,
-  battingAverage: number,
+  pitching: PitchingLine,
 ) {
   return created<{ team_member_id: number }>(agent, '/players', {
     name,
@@ -140,8 +151,6 @@ export function createPitcher(
     position: 'Lanzador',
     at_bats: null,
     hits: null,
-    innings_pitched: 90.2,
-    runs_allowed: 25,
-    batting_average: battingAverage,
+    ...pitching,
   });
 }

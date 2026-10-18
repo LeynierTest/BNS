@@ -10,6 +10,33 @@ import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { isPitcherPosition } from './player-positions';
 
+const PITCHING_FIELDS = [
+  'innings_pitched',
+  'runs_allowed',
+  'hits_allowed',
+  'walks_allowed',
+  'strikeouts',
+  'home_runs_allowed',
+  'hit_batsmen',
+] as const;
+
+const BATTING_FIELDS = ['at_bats', 'hits'] as const;
+
+type PlayerStatistics = Partial<
+  Record<
+    | (typeof PITCHING_FIELDS)[number]
+    | (typeof BATTING_FIELDS)[number]
+    | 'batting_average',
+    number | Prisma.Decimal | null
+  >
+>;
+
+function formatFields(fields: readonly string[]) {
+  return fields.length <= 1
+    ? fields.join('')
+    : `${fields.slice(0, -1).join(', ')} y ${fields[fields.length - 1]}`;
+}
+
 @Injectable()
 export class PlayersService {
   constructor(private readonly prisma: PrismaService,
@@ -70,74 +97,62 @@ export class PlayersService {
     return player;
   }
 
+  /**
+   * Cada posición lleva sus estadísticas (misma regla que el trigger
+   * validate_player_stats): los lanzadores, las de pitcheo y no el promedio
+   * de bateo, porque su promedio es el ERA, que se calcula; el resto, turnos
+   * al bate, hits y promedio de bateo.
+   */
   private validatePlayerStatistics(
     position: string,
-    data: {
-      at_bats?: number | null;
-      hits?: number | null;
-      innings_pitched?: number | Prisma.Decimal | null;
-      runs_allowed?: number | null;
-    },
+    data: PlayerStatistics,
   ) {
+    const present = (field: keyof PlayerStatistics) =>
+      data[field] !== null && data[field] !== undefined;
+
     if (isPitcherPosition(position)) {
-      if (
-        data.innings_pitched === null ||
-        data.innings_pitched === undefined ||
-        data.runs_allowed === null ||
-        data.runs_allowed === undefined
-      ) {
+      const missing = PITCHING_FIELDS.filter((field) => !present(field));
+
+      if (missing.length > 0) {
         throw new BadRequestException(
-          'Los lanzadores deben tener innings_pitched y runs_allowed',
+          `Los lanzadores deben tener ${formatFields(missing)}`,
         );
       }
 
-      if (
-        data.at_bats !== null &&
-        data.at_bats !== undefined
-      ) {
+      const forbidden = [...BATTING_FIELDS, 'batting_average' as const].filter(
+        present,
+      );
+
+      if (forbidden.length > 0) {
         throw new BadRequestException(
-          'Los lanzadores no pueden tener at_bats',
+          `Los lanzadores no pueden tener ${formatFields(forbidden)}: su promedio es el ERA, que se calcula con innings_pitched y runs_allowed`,
         );
       }
 
-      if (
-        data.hits !== null &&
-        data.hits !== undefined
-      ) {
+      if (Number(data.home_runs_allowed) > Number(data.hits_allowed)) {
         throw new BadRequestException(
-          'Los lanzadores no pueden tener hits',
+          'home_runs_allowed no puede ser mayor que hits_allowed: todo jonrón es un hit',
         );
       }
 
       return;
     }
 
-    if (
-      data.at_bats === null ||
-      data.at_bats === undefined ||
-      data.hits === null ||
-      data.hits === undefined
-    ) {
+    const missing = [...BATTING_FIELDS, 'batting_average' as const].filter(
+      (field) => !present(field),
+    );
+
+    if (missing.length > 0) {
       throw new BadRequestException(
-        'Los jugadores que no son lanzadores deben tener at_bats y hits',
+        `Los jugadores que no son lanzadores deben tener ${formatFields(missing)}`,
       );
     }
 
-    if (
-      data.innings_pitched !== null &&
-      data.innings_pitched !== undefined
-    ) {
-      throw new BadRequestException(
-        'Los jugadores que no son lanzadores no pueden tener innings_pitched',
-      );
-    }
+    const forbidden = PITCHING_FIELDS.filter(present);
 
-    if (
-      data.runs_allowed !== null &&
-      data.runs_allowed !== undefined
-    ) {
+    if (forbidden.length > 0) {
       throw new BadRequestException(
-        'Los jugadores que no son lanzadores no pueden tener runs_allowed',
+        `Los jugadores que no son lanzadores no pueden tener ${formatFields(forbidden)}`,
       );
     }
   }
@@ -177,7 +192,14 @@ export class PlayersService {
               innings_pitched: data.innings_pitched,
               hits: data.hits,
               runs_allowed: data.runs_allowed,
-              batting_average: data.batting_average,
+              batting_average: isPitcherPosition(data.position)
+                ? null
+                : data.batting_average,
+              hits_allowed: data.hits_allowed,
+              walks_allowed: data.walks_allowed,
+              strikeouts: data.strikeouts,
+              home_runs_allowed: data.home_runs_allowed,
+              hit_batsmen: data.hit_batsmen,
             },
             include: {
               team_member: {
@@ -218,26 +240,26 @@ export class PlayersService {
         ? data.position
         : currentPlayer.position;
 
-    const statistics = {
-      at_bats:
-        data.at_bats !== undefined
-          ? data.at_bats
-          : currentPlayer.at_bats,
+    const pick = <Field extends keyof PlayerStatistics>(field: Field) =>
+      data[field] !== undefined ? data[field] : currentPlayer[field];
+    const pitcher = isPitcherPosition(position);
 
-      hits:
-        data.hits !== undefined
-          ? data.hits
-          : currentPlayer.hits,
-
-      innings_pitched:
-        data.innings_pitched !== undefined
-          ? data.innings_pitched
-          : currentPlayer.innings_pitched,
-
-      runs_allowed:
-        data.runs_allowed !== undefined
-          ? data.runs_allowed
-          : currentPlayer.runs_allowed,
+    const statistics: PlayerStatistics = {
+      at_bats: pick('at_bats'),
+      hits: pick('hits'),
+      innings_pitched: pick('innings_pitched'),
+      runs_allowed: pick('runs_allowed'),
+      hits_allowed: pick('hits_allowed'),
+      walks_allowed: pick('walks_allowed'),
+      strikeouts: pick('strikeouts'),
+      home_runs_allowed: pick('home_runs_allowed'),
+      hit_batsmen: pick('hit_batsmen'),
+      // Un lanzador antiguo puede conservar un promedio de bateo de antes de
+      // las estadísticas de pitcheo: solo se rechaza si se envía, y al
+      // guardarlo se borra.
+      batting_average: pitcher
+        ? data.batting_average
+        : pick('batting_average'),
     };
 
     this.validatePlayerStatistics(
@@ -301,8 +323,25 @@ export class PlayersService {
             ...(data.runs_allowed !== undefined && {
               runs_allowed: data.runs_allowed,
             }),
-            ...(data.batting_average !== undefined && {
-              batting_average: data.batting_average,
+            ...(pitcher
+              ? { batting_average: null }
+              : data.batting_average !== undefined && {
+                  batting_average: data.batting_average,
+                }),
+            ...(data.hits_allowed !== undefined && {
+              hits_allowed: data.hits_allowed,
+            }),
+            ...(data.walks_allowed !== undefined && {
+              walks_allowed: data.walks_allowed,
+            }),
+            ...(data.strikeouts !== undefined && {
+              strikeouts: data.strikeouts,
+            }),
+            ...(data.home_runs_allowed !== undefined && {
+              home_runs_allowed: data.home_runs_allowed,
+            }),
+            ...(data.hit_batsmen !== undefined && {
+              hit_batsmen: data.hit_batsmen,
             }),
           },
           include: {
