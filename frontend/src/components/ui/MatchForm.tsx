@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useState,
   type FormEvent,
 } from 'react';
@@ -9,7 +8,6 @@ import { Button } from './Button';
 import { ErrorMessage } from './ErrorMessage';
 import { Input } from './Input';
 import { Select } from './Select';
-import './MatchForm.css';
 import './MatchForm.css';
 
 export interface MatchTeamOption {
@@ -95,32 +93,6 @@ export function MatchForm({
 
   const [validationError, setValidationError] =
     useState<string | null>(null);
-
-  useEffect(() => {
-    setVisitorTeamId(
-      initialData?.visitor_team_id?.toString() ?? '',
-    );
-    setHomeTeamId(
-      initialData?.home_team_id?.toString() ?? '',
-    );
-    setMatchDate(initialData?.match_date ?? '');
-    setStadiumId(
-      initialData?.stadium_id?.toString() ?? '',
-    );
-    setPhaseId(
-      initialData?.phase_id?.toString() ?? '',
-    );
-    setVisitorScore(
-      initialData?.visitor_score?.toString() ?? '0',
-    );
-    setHomeScore(
-      initialData?.home_score?.toString() ?? '0',
-    );
-    setAudience(
-      initialData?.audience?.toString() ?? '0',
-    );
-    setValidationError(null);
-  }, [initialData]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

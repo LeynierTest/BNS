@@ -551,6 +551,7 @@ export default function MatchesPage() {
         onClose={closeModal}
       >
         <MatchForm
+          key={editingMatch?.match_id ?? 'create-match-form'}
           initialData={
             editingMatch
               ? {
