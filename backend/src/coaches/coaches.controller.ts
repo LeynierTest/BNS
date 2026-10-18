@@ -32,22 +32,21 @@ export class CoachesController {
 
   @Get('search')
   async search(
-    @Query('number') number?: string,
+    @Query('number', new ParseIntPipe({ optional: true }))
+    number?: number,
     @Query('name') name?: string,
     @Query('team') team?: string,
-    @Query('years_on_team') yearsOnTeam?: string,
-    @Query('years_experience') yearsExperience?: string,
+    @Query('years_on_team', new ParseIntPipe({ optional: true }))
+    yearsOnTeam?: number,
+    @Query('years_experience', new ParseIntPipe({ optional: true }))
+    yearsExperience?: number,
   ) {
     return this.coachesService.searchCoaches(
-      number !== undefined ? Number(number) : undefined,
+      number,
       name,
       team,
-      yearsOnTeam !== undefined
-        ? Number(yearsOnTeam)
-        : undefined,
-      yearsExperience !== undefined
-        ? Number(yearsExperience)
-        : undefined,
+      yearsOnTeam,
+      yearsExperience,
     );
   }
   @Sse('events')

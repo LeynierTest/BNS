@@ -34,20 +34,21 @@ export class TeamsController {
     @Query('province') province?: string,
     @Query('color') color?: string,
     @Query('mascot') mascot?: string,
-    @Query('championships_participated') championshipsParticipated?: string,
-    @Query('championships_won') championshipsWon?: string,
+    @Query(
+      'championships_participated',
+      new ParseIntPipe({ optional: true }),
+    )
+    championshipsParticipated?: number,
+    @Query('championships_won', new ParseIntPipe({ optional: true }))
+    championshipsWon?: number,
   ) {
     return this.teamsService.searchTeams(
       name,
       province,
       color,
       mascot,
-      championshipsParticipated !== undefined
-        ? Number(championshipsParticipated)
-        : undefined,
-      championshipsWon !== undefined
-        ? Number(championshipsWon)
-        : undefined,
+      championshipsParticipated,
+      championshipsWon,
     );
   }
   @Sse('events')

@@ -34,12 +34,13 @@ export class StadiumsController {
   async search(
     @Query('name') name?: string,
     @Query('province') province?: string,
-    @Query('capacity') capacity?: string,
+    @Query('capacity', new ParseIntPipe({ optional: true }))
+    capacity?: number,
   ) {
     return this.stadiumsService.searchStadiums(
       name,
       province,
-      capacity !== undefined ? Number(capacity) : undefined,
+      capacity,
     );
   }
   @Sse('events')

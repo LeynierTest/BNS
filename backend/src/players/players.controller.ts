@@ -32,13 +32,14 @@ export class PlayersController {
 
   @Get('search')
   async search(
-    @Query('number') number?: string,
+    @Query('number', new ParseIntPipe({ optional: true }))
+    number?: number,
     @Query('name') name?: string,
     @Query('team') team?: string,
     @Query('position') position?: string,
   ) {
     return this.playersService.searchPlayers(
-      number !== undefined ? Number(number) : undefined,
+      number,
       name,
       team,
       position,
