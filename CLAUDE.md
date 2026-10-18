@@ -172,6 +172,10 @@ Piezas transversales (no repetir su lógica en cada módulo):
   puede pedir 5 reportes por correo cada 10 minutos.
 - Reportes por correo: un User solo puede enviarlos a su propio correo (403
   si pide otro, y es el destino por defecto); un Administrator, a cualquiera.
+- Borrado de equipos: solo se elimina un equipo sin historial (sin
+  peloteros ni partidos, p. ej. creado por error). Con historial se rechaza
+  (400) diciendo qué lo impide; no hay borrado en cascada ni "archivado",
+  porque cambiaría la tabla, los reportes y la clasificación de los demás.
 - Invariante de usuarios: siempre debe quedar al menos un Administrator
   activo (`UsersService.assertKeepsAnActiveAdministrator`, con bloqueo de
   filas para operaciones concurrentes).
@@ -200,8 +204,8 @@ Piezas transversales (no repetir su lógica en cada módulo):
   hits <= at_bats (también CHECK `player_hits_le_at_bats_ck`, `NOT VALID`).
   `computeBattingAverage` (`frontend/src/types/player.ts`) es el espejo para
   la vista previa del formulario.
-- **Regla 8/4/2 (equipos activos por fase)** — decisiones del equipo
-  (2026-10-18):
+- **Regla 8/4/2 (equipos activos por fase)** — decisiones del equipo,
+  todas confirmadas (2026-10-18):
   - Las fases son exactamente las del enunciado, una vez cada una y en orden
     cronológico: `phases/series-phases.ts` (`SERIES_PHASES`), espejo en
     `frontend/src/types/phase.ts`. En la base: `phase_name_uq` y
@@ -215,7 +219,11 @@ Piezas transversales (no repetir su lógica en cada módulo):
     pierde una serie queda fuera hasta que quedan tantos como plazas. La
     fase siguiente queda bloqueada mientras el corte no esté decidido. La
     tabla general (reporte 1) sí cuenta los desempates como victorias.
-  - Los partidos de un equipo eliminado se rechazan (no solo se marcan).
+  - Los partidos de un equipo eliminado se rechazan (no solo se marcan): un
+    equipo no puede jugar una fase a la que no pasó.
+  - Un partido empatado cuenta como jugado y no da victoria a nadie (tabla
+    general, estado del equipo y corte de la fase); solo los partidos de
+    desempate exigen ganador.
   - Algoritmo puro y especificado en `qualification/series-qualification.ts`.
     Toda escritura que pueda alterarlo (partidos, fases, equipos) pasa por
     `QualificationService.runConsistentWrite`: transacción con
@@ -341,7 +349,7 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 107 e2e;
+  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 110 e2e;
   frontend con 39 pruebas (Vitest).
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).

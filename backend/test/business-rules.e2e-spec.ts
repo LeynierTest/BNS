@@ -211,10 +211,41 @@ describe('Reglas de negocio (e2e)', () => {
   });
 
   describe('borrados que dejarían datos huérfanos', () => {
-    it('no elimina un equipo con peloteros', async () => {
+    it('no elimina un equipo con peloteros y explica por qué', async () => {
       await createCoach(admin, ref.awayTeamId, 'Entrenador', 1, 10);
 
-      await admin.delete(`/teams/${ref.awayTeamId}`).expect(400);
+      const response = await admin
+        .delete(`/teams/${ref.awayTeamId}`)
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'No se puede eliminar Visitante porque tiene historial en la Serie (1 pelotero). Solo se puede eliminar un equipo sin peloteros ni partidos',
+      );
+      expect(
+        await ctx.prisma.team.count({ where: { team_id: ref.awayTeamId } }),
+      ).toBe(1);
+    });
+
+    it('no elimina un equipo con partidos (cambiaría la tabla de los demás)', async () => {
+      await createMatch(admin, matchPayload());
+      await createMatch(admin, matchPayload({ match_date: '2026-10-21' }));
+
+      const response = await admin
+        .delete(`/teams/${ref.homeTeamId}`)
+        .expect(400);
+
+      expect(response.body.message).toBe(
+        'No se puede eliminar Local porque tiene historial en la Serie (2 partidos). Solo se puede eliminar un equipo sin peloteros ni partidos',
+      );
+    });
+
+    it('elimina un equipo sin historial (p. ej. creado por error)', async () => {
+      const mistake = await createTeam(admin, { name: 'Creado por error' });
+
+      await admin.delete(`/teams/${mistake.team_id}`).expect(200);
+      expect(
+        await ctx.prisma.team.count({ where: { team_id: mistake.team_id } }),
+      ).toBe(0);
     });
 
     it('no elimina una fase con partidos', async () => {
@@ -227,6 +258,53 @@ describe('Reglas de negocio (e2e)', () => {
       await createMatch(admin, matchPayload());
 
       await admin.delete(`/stadiums/${ref.stadiumId}`).expect(400);
+    });
+  });
+
+  describe('partidos empatados', () => {
+    it('cuentan como jugados pero no dan victoria a ningún equipo', async () => {
+      await createMatch(
+        admin,
+        matchPayload({ away_score: 3, home_score: 3 }),
+      );
+
+      const standings = await admin.get('/standings').expect(200);
+
+      expect(
+        (
+          standings.body as {
+            team_name: string;
+            games_played: number;
+            points: number;
+          }[]
+        ).map(({ team_name, games_played, points }) => [
+          team_name,
+          games_played,
+          points,
+        ]),
+      ).toEqual([
+        ['Local', 1, 0],
+        ['Visitante', 1, 0],
+      ]);
+
+      const status = await admin
+        .get(`/teams/${ref.awayTeamId}/status`)
+        .expect(200);
+
+      expect(status.body).toEqual([
+        expect.objectContaining({
+          phase_name: 'Primera Ronda',
+          games_won_total: 0,
+          games_lost_total: 0,
+        }),
+      ]);
+
+      const qualification = await admin.get('/qualification').expect(200);
+
+      expect(qualification.body[0].standings).toEqual([
+        expect.objectContaining({ team_name: 'Local', games_played: 1, points: 0 }),
+        expect.objectContaining({ team_name: 'Visitante', games_played: 1, points: 0 }),
+      ]);
     });
   });
 
