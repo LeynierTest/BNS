@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QualificationService } from '../qualification/qualification.service';
 import { UNSAVED_ID } from '../qualification/series-qualification';
+import { resolveSeasonId } from '../seasons/season-scope';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
 import { PHASE_NAMES, getPhaseOrder } from './series-phases';
@@ -23,26 +24,28 @@ export class PhasesService {
     private readonly qualificationService: QualificationService) {}
 
   /**
-   * Cada fase de la Serie existe una sola vez y en su orden: empieza después
-   * de que termine la anterior y termina antes de que empiece la siguiente
-   * (los equipos activos de una fase salen de la anterior ya terminada).
+   * Cada fase existe una sola vez por temporada y en su orden: empieza
+   * después de que termine la anterior y termina antes de que empiece la
+   * siguiente (los equipos activos de una fase salen de la anterior ya
+   * terminada). Solo cuentan las fases de la misma temporada.
    */
   private async validateSeriesPlace(
     tx: Prisma.TransactionClient,
+    seasonId: number,
     phaseId: number | null,
     name: string,
     startDate: Date,
     endDate: Date,
   ) {
     const otherPhases = await tx.phase.findMany({
-      where:
-        phaseId === null
-          ? {}
-          : {
-              phase_id: {
-                not: phaseId,
-              },
-            },
+      where: {
+        season_id: seasonId,
+        ...(phaseId !== null && {
+          phase_id: {
+            not: phaseId,
+          },
+        }),
+      },
       select: {
         name: true,
         start_date: true,
@@ -85,18 +88,26 @@ export class PhasesService {
   async searchPhases(
     name?: string,
     activeDate?: string,
+    seasonId?: number,
   ) {
+    const season = await resolveSeasonId(this.prisma, seasonId);
+
     return this.prisma.$queryRaw`
       SELECT *
       FROM search_phases(
         p_name => ${name ?? null},
-        p_active_date => ${activeDate ?? null}
+        p_active_date => ${activeDate ?? null},
+        p_season_id => ${season}
       )
     `;
   }
 
-  async getAllPhases() {
+  /** Fases de una temporada (por defecto, la más reciente). */
+  async getAllPhases(seasonId?: number) {
     return this.prisma.phase.findMany({
+      where: {
+        season_id: await resolveSeasonId(this.prisma, seasonId),
+      },
       orderBy: {
         phase_id: 'asc',
       },
@@ -140,12 +151,16 @@ export class PhasesService {
       );
     }
 
+    const seasonId = await resolveSeasonId(this.prisma, data.season_id);
+
     try {
       const createdPhase =
         await this.qualificationService.runConsistentWrite({
+          seasonId,
           validate: (tx) =>
             this.validateSeriesPlace(
               tx,
+              seasonId,
               null,
               data.name,
               startDate,
@@ -164,6 +179,7 @@ export class PhasesService {
                 name: data.name,
                 start_date: startDate,
                 end_date: endDate,
+                season_id: seasonId,
               },
             }),
         });
@@ -264,9 +280,11 @@ export class PhasesService {
     try {
       const updatedPhase =
         await this.qualificationService.runConsistentWrite({
+          seasonId: currentPhase.season_id,
           validate: (tx) =>
             this.validateSeriesPlace(
               tx,
+              currentPhase.season_id,
               id,
               name,
               startDate,
@@ -325,6 +343,7 @@ export class PhasesService {
 
     const deletedPhase =
       await this.qualificationService.runConsistentWrite({
+        seasonId: phase.season_id,
         simulate: (snapshot) => ({
           ...snapshot,
           phases: snapshot.phases.filter(

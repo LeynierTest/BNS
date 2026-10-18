@@ -7,6 +7,8 @@ import { TopCoachesService } from '../top-coaches/top-coaches.service';
 import { StadiumAttendanceService } from '../stadium-attendance/stadium-attendance.service';
 import { TeamStatusService } from '../team-status/team-status.service';
 import { AllStarTeamService } from '../all-star-team/all-star-team.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 @Injectable()
 export class ReportsService {
@@ -18,6 +20,7 @@ export class ReportsService {
     private readonly stadiumAttendanceService: StadiumAttendanceService,
     private readonly teamStatusService: TeamStatusService,
     private readonly allStarTeamService: AllStarTeamService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private formatDate(date: Date | string): string {
@@ -50,7 +53,20 @@ export class ReportsService {
     return `${value.toFixed(2)} %`;
   }
 
-  private createDocument(title: string): PDFKit.PDFDocument {
+  /** "Temporada 1 · Serie Nacional de Béisbol": a qué temporada se refiere el reporte. */
+  private async seasonLabel(seasonId?: number): Promise<string> {
+    const season = await this.prisma.season.findUniqueOrThrow({
+      where: { season_id: await resolveSeasonId(this.prisma, seasonId) },
+      select: { name: true, series: { select: { name: true } } },
+    });
+
+    return `${season.name} · ${season.series.name}`;
+  }
+
+  private createDocument(
+    title: string,
+    context?: string,
+  ): PDFKit.PDFDocument {
     const doc = new PDFDocument({
       size: 'A4',
       margin: 45,
@@ -66,6 +82,11 @@ export class ReportsService {
     });
 
     doc.moveDown(0.5);
+
+    if (context) {
+      doc.fontSize(11).font('Helvetica').text(context, { align: 'center' });
+      doc.moveDown(0.3);
+    }
 
     doc
       .fontSize(9)
@@ -165,9 +186,12 @@ export class ReportsService {
     });
   }
 
-  async standingsPdf(): Promise<Buffer> {
-    const data = await this.standingsService.getStandings();
-    const doc = this.createDocument('Tabla de Posiciones');
+  async standingsPdf(seasonId?: number): Promise<Buffer> {
+    const data = await this.standingsService.getStandings(seasonId);
+    const doc = this.createDocument(
+      'Tabla de Posiciones',
+      await this.seasonLabel(seasonId),
+    );
 
     this.addTable(
       doc,
@@ -186,13 +210,18 @@ export class ReportsService {
   async matchesByTeamsPdf(
     homeTeamId: number,
     awayTeamId: number,
+    seasonId?: number,
   ): Promise<Buffer> {
     const data = await this.matchesByTeamsService.getMatchesByTeams(
       homeTeamId,
       awayTeamId,
+      seasonId,
     );
 
-    const doc = this.createDocument('Partidos entre Equipos');
+    const doc = this.createDocument(
+      'Partidos entre Equipos',
+      await this.seasonLabel(seasonId),
+    );
 
     this.addTable(
       doc,
@@ -215,13 +244,18 @@ export class ReportsService {
   async matchesByDatePdf(
     date: string,
     stadiumId?: number,
+    seasonId?: number,
   ): Promise<Buffer> {
     const data = await this.matchesByDateService.getMatchesByDate(
       date,
       stadiumId,
+      seasonId,
     );
 
-    const doc = this.createDocument(`Partidos del ${this.formatDate(date)}`);
+    const doc = this.createDocument(
+      `Partidos del ${this.formatDate(date)}`,
+      await this.seasonLabel(seasonId),
+    );
 
     this.addTable(
       doc,
@@ -260,9 +294,13 @@ export class ReportsService {
     return this.finish(doc);
   }
 
-  async stadiumAttendancePdf(): Promise<Buffer> {
-    const data = await this.stadiumAttendanceService.getStadiumAttendance();
-    const doc = this.createDocument('Asistencia por Estadio');
+  async stadiumAttendancePdf(seasonId?: number): Promise<Buffer> {
+    const data =
+      await this.stadiumAttendanceService.getStadiumAttendance(seasonId);
+    const doc = this.createDocument(
+      'Asistencia por Estadio',
+      await this.seasonLabel(seasonId),
+    );
 
     this.addTable(
       doc,
@@ -280,9 +318,12 @@ export class ReportsService {
     return this.finish(doc);
   }
 
-  async teamStatusPdf(teamId: number): Promise<Buffer> {
-    const data = await this.teamStatusService.getTeamStatus(teamId);
-    const doc = this.createDocument('Estado del Equipo por Fase');
+  async teamStatusPdf(teamId: number, seasonId?: number): Promise<Buffer> {
+    const data = await this.teamStatusService.getTeamStatus(teamId, seasonId);
+    const doc = this.createDocument(
+      'Estado del Equipo por Fase',
+      await this.seasonLabel(seasonId),
+    );
 
     this.addTable(
       doc,

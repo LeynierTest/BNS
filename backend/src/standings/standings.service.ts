@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 type Standing = {
   team_id: number;
@@ -12,7 +13,9 @@ type Standing = {
 export class StandingsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStandings(): Promise<Standing[]> {
+  /** Tabla de una temporada (por defecto, la más reciente). */
+  async getStandings(seasonId?: number): Promise<Standing[]> {
+    const season = await resolveSeasonId(this.prisma, seasonId);
     const standings = await this.prisma.$queryRaw<
       {
         team_id: bigint;
@@ -21,7 +24,7 @@ export class StandingsService {
         points: bigint;
       }[]
     >`
-      SELECT * FROM get_standings()
+      SELECT * FROM get_standings(${season})
     `;
 
     return standings.map((standing) => ({

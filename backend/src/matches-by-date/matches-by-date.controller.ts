@@ -19,7 +19,13 @@ export class MatchesByDateController {
     @Param('date', new ParseDateOnlyPipe()) date: string,
     @Query('stadiumId', new ParseIntPipe({ optional: true }))
     stadiumId?: number,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
   ) {
-    return this.matchesByDateService.getMatchesByDate(date, stadiumId);
+    return this.matchesByDateService.getMatchesByDate(
+      date,
+      stadiumId,
+      seasonId,
+    );
   }
 }

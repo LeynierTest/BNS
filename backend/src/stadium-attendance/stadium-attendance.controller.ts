@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { StadiumAttendanceService } from './stadium-attendance.service';
 
 @Controller('stadiums')
@@ -8,7 +8,10 @@ export class StadiumAttendanceController {
   ) {}
 
   @Get('attendance')
-  async getStadiumAttendance() {
-    return this.stadiumAttendanceService.getStadiumAttendance();
+  async getStadiumAttendance(
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
+  ) {
+    return this.stadiumAttendanceService.getStadiumAttendance(seasonId);
   }
 }

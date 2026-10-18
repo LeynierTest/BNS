@@ -3,6 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 type TeamStatus = {
   phase_name: string;
@@ -18,7 +19,11 @@ type TeamStatus = {
 export class TeamStatusService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getTeamStatus(teamId: number): Promise<TeamStatus[]> {
+  async getTeamStatus(
+    teamId: number,
+    seasonId?: number,
+  ): Promise<TeamStatus[]> {
+    const season = await resolveSeasonId(this.prisma, seasonId);
     const team = await this.prisma.team.findUnique({
       where: {
         team_id: teamId,
@@ -45,7 +50,7 @@ export class TeamStatusService {
         games_lost_home: bigint;
       }[]
     >`
-      SELECT * FROM get_team_status(${teamId})
+      SELECT * FROM get_team_status(${teamId}, ${season})
     `;
 
     return status.map((item) => ({

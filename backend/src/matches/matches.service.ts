@@ -11,6 +11,7 @@ import { MatchesEventsService } from './matches-events.service';
 import { QualificationService } from '../qualification/qualification.service';
 import { UNSAVED_ID } from '../qualification/series-qualification';
 import type { SeriesMatch } from '../qualification/series-qualification';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 const matchInclude = {
   team_match_home_team_idToteam: true,
@@ -33,7 +34,10 @@ export class MatchesService {
     matchDate?: string,
     stadium?: string,
     phase?: string,
+    seasonId?: number,
   ) {
+    const season = await resolveSeasonId(this.prisma, seasonId);
+
     return this.prisma.$queryRaw`
       SELECT *
       FROM search_matches(
@@ -41,13 +45,22 @@ export class MatchesService {
         p_home_team => ${homeTeam ?? null},
         p_match_date => ${matchDate ?? null},
         p_stadium => ${stadium ?? null},
-        p_phase => ${phase ?? null}
+        p_phase => ${phase ?? null},
+        p_season_id => ${season}
       )
     `;
   }
 
-  async getAllMatches() {
+  /** Partidos de una temporada (por defecto, la más reciente). */
+  async getAllMatches(seasonId?: number) {
+    const season = await resolveSeasonId(this.prisma, seasonId);
+
     return this.prisma.match.findMany({
+      where: {
+        phase: {
+          season_id: season,
+        },
+      },
       orderBy: {
         match_date: 'asc',
       },
@@ -182,6 +195,7 @@ export class MatchesService {
     try {
       const createdMatch =
         await this.qualificationService.runConsistentWrite({
+          seasonId: phase.season_id,
           focusMatchId: UNSAVED_ID,
           simulate: (snapshot) => ({
             ...snapshot,
@@ -313,6 +327,13 @@ export class MatchesService {
       );
     }
 
+    // Moverlo a otra temporada cambiaría la clasificación de las dos.
+    if (phase.season_id !== currentMatch.phase.season_id) {
+      throw new BadRequestException(
+        'No se puede mover un partido a una fase de otra temporada',
+      );
+    }
+
     const matchDate =
       data.match_date !== undefined
         ? new Date(
@@ -342,6 +363,7 @@ export class MatchesService {
     try {
       const updatedMatch =
         await this.qualificationService.runConsistentWrite({
+          seasonId: phase.season_id,
           focusMatchId: id,
           simulate: (snapshot) => ({
             ...snapshot,
@@ -417,10 +439,11 @@ export class MatchesService {
   }
 
   async deleteMatch(id: number) {
-    await this.getMatchById(id);
+    const currentMatch = await this.getMatchById(id);
 
     const deletedMatch =
       await this.qualificationService.runConsistentWrite({
+        seasonId: currentMatch.phase.season_id,
         simulate: (snapshot) => ({
           ...snapshot,
           matches: snapshot.matches.filter(

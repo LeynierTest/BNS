@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 type StadiumAttendance = {
   stadium_name: string;
@@ -13,7 +14,10 @@ type StadiumAttendance = {
 export class StadiumAttendanceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getStadiumAttendance(): Promise<StadiumAttendance[]> {
+  async getStadiumAttendance(
+    seasonId?: number,
+  ): Promise<StadiumAttendance[]> {
+    const season = await resolveSeasonId(this.prisma, seasonId);
     const stadiums = await this.prisma.$queryRaw<
       {
         stadium_name: string;
@@ -23,7 +27,7 @@ export class StadiumAttendanceService {
         attendance_percentage: number | null;
       }[]
     >`
-      SELECT * FROM get_stadium_attendance()
+      SELECT * FROM get_stadium_attendance(${season})
     `;
 
     return stadiums.map((stadium) => ({

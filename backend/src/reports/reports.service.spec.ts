@@ -23,6 +23,7 @@ describe('ReportsService · fechas en los PDF', () => {
       unused,
       unused,
       unused,
+      unused,
     );
 
     return service['formatDate'](value);
