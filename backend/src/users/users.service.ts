@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
+const ADMINISTRATOR_ROLE = 'Administrator';
+
 const publicUserSelect = {
   user_id: true,
   username: true,
@@ -26,6 +28,39 @@ const publicUserSelect = {
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Invariante: el sistema conserva siempre al menos un Administrator
+   * activo. Bloquea (FOR UPDATE, en orden fijo) las filas de los
+   * administradores activos para que dos operaciones concurrentes no
+   * puedan dejar el sistema sin ninguno.
+   */
+  private async assertKeepsAnActiveAdministrator(
+    tx: Prisma.TransactionClient,
+    userId: number,
+    message: string,
+  ) {
+    const activeAdministrators = await tx.$queryRaw<
+      { user_id: number }[]
+    >`
+      SELECT u.user_id
+      FROM app_user u
+      JOIN role r
+        ON r.role_id = u.role_id
+      WHERE r.name = ${ADMINISTRATOR_ROLE}
+        AND u.active
+      ORDER BY u.user_id
+      FOR UPDATE OF u
+    `;
+
+    const isActiveAdministrator = activeAdministrators.some(
+      (administrator) => administrator.user_id === userId,
+    );
+
+    if (isActiveAdministrator && activeAdministrators.length <= 1) {
+      throw new BadRequestException(message);
+    }
+  }
 
   async searchUsers(
     username?: string,
@@ -146,27 +181,18 @@ export class UsersService {
       );
     }
 
-    if (user.role.name === 'Administrator') {
-      const administratorCount =
-        await this.prisma.app_user.count({
-          where: {
-            role: {
-              name: 'Administrator',
-            },
-          },
-        });
+    await this.prisma.$transaction(async (tx) => {
+      await this.assertKeepsAnActiveAdministrator(
+        tx,
+        id,
+        'No se puede eliminar al último Administrator activo del sistema',
+      );
 
-      if (administratorCount <= 1) {
-        throw new BadRequestException(
-          'No se puede eliminar al último Administrator del sistema',
-        );
-      }
-    }
-
-    await this.prisma.app_user.delete({
-      where: {
-        user_id: id,
-      },
+      await tx.app_user.delete({
+        where: {
+          user_id: id,
+        },
+      });
     });
 
     return user;
@@ -211,29 +237,44 @@ export class UsersService {
         ? await bcrypt.hash(data.password, 12)
         : undefined;
 
+    const removesAdministratorAccess =
+      (data.role !== undefined &&
+        data.role !== ADMINISTRATOR_ROLE) ||
+      data.active === false;
+
     try {
-      return await this.prisma.app_user.update({
-        where: {
-          user_id: id,
-        },
-        data: {
-          ...(data.username !== undefined && {
-            username: data.username,
-          }),
-          ...(data.email !== undefined && {
-            email: data.email,
-          }),
-          ...(passwordHash !== undefined && {
-            password_hash: passwordHash,
-          }),
-          ...(roleId !== undefined && {
-            role_id: roleId,
-          }),
-          ...(data.active !== undefined && {
-            active: data.active,
-          }),
-        },
-        select: publicUserSelect,
+      return await this.prisma.$transaction(async (tx) => {
+        if (removesAdministratorAccess) {
+          await this.assertKeepsAnActiveAdministrator(
+            tx,
+            id,
+            'No se puede quitar el rol ni desactivar al último Administrator activo del sistema',
+          );
+        }
+
+        return tx.app_user.update({
+          where: {
+            user_id: id,
+          },
+          data: {
+            ...(data.username !== undefined && {
+              username: data.username,
+            }),
+            ...(data.email !== undefined && {
+              email: data.email,
+            }),
+            ...(passwordHash !== undefined && {
+              password_hash: passwordHash,
+            }),
+            ...(roleId !== undefined && {
+              role_id: roleId,
+            }),
+            ...(data.active !== undefined && {
+              active: data.active,
+            }),
+          },
+          select: publicUserSelect,
+        });
       });
     } catch (error) {
       if (
