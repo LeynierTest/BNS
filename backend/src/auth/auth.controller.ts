@@ -17,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { Public } from './decorators/public.decorator';
 import {
   ACCESS_TOKEN_COOKIE,
@@ -42,6 +43,26 @@ export class AuthController {
   ) {
     const { accessToken, user } =
       await this.authService.login(data, ip);
+
+    response.cookie(
+      ACCESS_TOKEN_COOKIE,
+      accessToken,
+      accessTokenCookieOptions(),
+    );
+
+    return { user };
+  }
+
+  /** Registro público: crea una cuenta User e inicia su sesión. */
+  @Public()
+  @Post('register')
+  async register(
+    @Body() data: RegisterDto,
+    @Ip() ip: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, user } =
+      await this.authService.register(data, ip);
 
     response.cookie(
       ACCESS_TOKEN_COOKIE,
