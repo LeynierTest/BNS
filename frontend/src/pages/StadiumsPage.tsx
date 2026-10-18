@@ -519,6 +519,7 @@ export default function StadiumsPage() {
         }
       >
         <StadiumForm
+          key={editingStadium?.stadium_id ?? 'create-stadium-form'}
           initialValues={formInitialValues}
           onSubmit={handleSubmit}
           onCancel={closeModal}
