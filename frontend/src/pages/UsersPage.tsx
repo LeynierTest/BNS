@@ -12,6 +12,7 @@ import {
   searchUsers,
   updateUser,
 } from '../api/users';
+import type { UserSearchFilters } from '../api/users';
 import { useAuth } from '../auth/use-auth';
 import { Button } from '../components/ui/Button';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -52,13 +53,17 @@ export default function UsersPage() {
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [usernameFilter, setUsernameFilter] = useState('');
   const [emailFilter, setEmailFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (tras guardar o borrar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<UserSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
+  const [reloadCount, setReloadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -80,14 +85,15 @@ export default function UsersPage() {
 
     async function loadUsers() {
       try {
-        const data = await getUsers();
+        const data = appliedFilters
+          ? await searchUsers(appliedFilters)
+          : await getUsers();
 
         if (ignore) {
           return;
         }
 
         setUsers(data);
-        setAllUsers(data);
         setError('');
       } catch (requestError) {
         if (!ignore) {
@@ -101,6 +107,7 @@ export default function UsersPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -110,7 +117,11 @@ export default function UsersPage() {
     return () => {
       ignore = true;
     };
-  }, [t]);
+  }, [appliedFilters, reloadCount, t]);
+
+  function reloadUsers() {
+    setReloadCount((count) => count + 1);
+  }
 
   const hasActiveFilters =
     usernameFilter.trim() !== '' ||
@@ -118,36 +129,17 @@ export default function UsersPage() {
     roleFilter.trim() !== '' ||
     activeFilter !== '';
 
-  async function handleSearch() {
-    try {
-      setIsSearching(true);
-      setError('');
-
-      const data = await searchUsers({
-        username:
-          usernameFilter.trim() || undefined,
-        email:
-          emailFilter.trim() || undefined,
-        role:
-          roleFilter.trim() || undefined,
-        active:
-          activeFilter === ''
-            ? undefined
-            : activeFilter === 'true',
-      });
-
-      setUsers(data);
-      setHasSearched(true);
-    } catch (requestError) {
-      setError(
-        getApiErrorMessage(
-          requestError,
-          t('users.loadError'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+  function handleSearch() {
+    setIsSearching(true);
+    setAppliedFilters({
+      username: usernameFilter.trim() || undefined,
+      email: emailFilter.trim() || undefined,
+      role: roleFilter.trim() || undefined,
+      active:
+        activeFilter === ''
+          ? undefined
+          : activeFilter === 'true',
+    });
   }
 
   function clearFilters() {
@@ -155,9 +147,7 @@ export default function UsersPage() {
     setEmailFilter('');
     setRoleFilter('');
     setActiveFilter('');
-    setHasSearched(false);
-    setUsers(allUsers);
-    setError('');
+    setAppliedFilters(null);
   }
 
   const roleOptions = useMemo(
@@ -279,17 +269,9 @@ export default function UsersPage() {
           data.password = form.password;
         }
 
-        const updated = await updateUser(
+        await updateUser(
           editingUser.user_id,
           data,
-        );
-
-        setUsers((current) =>
-          current.map((item) =>
-            item.user_id === updated.user_id
-              ? updated
-              : item,
-          ),
         );
       } else {
         const data: CreateUserData = {
@@ -299,16 +281,12 @@ export default function UsersPage() {
           role: form.role,
         };
 
-        const created = await createUser(data);
-
-        setUsers((current) => [
-          ...current,
-          created,
-        ]);
+        await createUser(data);
       }
 
       setModalOpen(false);
       setEditingUser(null);
+      reloadUsers();
     } catch (requestError) {
       setFormError(
         getApiErrorMessage(
@@ -334,15 +312,8 @@ export default function UsersPage() {
 
       await deleteUser(userToDelete.user_id);
 
-      setUsers((current) =>
-        current.filter(
-          (item) =>
-            item.user_id !==
-            userToDelete.user_id,
-        ),
-      );
-
       setUserToDelete(null);
+      reloadUsers();
     } catch (requestError) {
       setError(
         getApiErrorMessage(
@@ -496,7 +467,7 @@ export default function UsersPage() {
         <div className="users-toolbar-footer">
           <Button
             type="button"
-            onClick={() => void handleSearch()}
+            onClick={handleSearch}
             disabled={isSearching}
           >
             {isSearching

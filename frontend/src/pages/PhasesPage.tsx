@@ -9,6 +9,7 @@ import {
   searchPhases,
   updatePhase,
 } from '../api/phases';
+import type { PhaseSearchFilters } from '../api/phases';
 import { getApiErrorMessage } from '../api/api-error';
 import { connectMatchesEvents } from '../api/matches-events';
 import { getPhaseQualification } from '../api/qualification';
@@ -70,7 +71,11 @@ export default function PhasesPage() {
   const [nameFilter, setNameFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<PhaseSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
@@ -99,13 +104,18 @@ export default function PhasesPage() {
 
     async function loadPhases() {
       try {
-        const data = await getPhases();
+        // La lista completa también hace falta con una búsqueda activa: el
+        // formulario valida nombre y fechas contra todas las fases.
+        const [data, searchResults] = await Promise.all([
+          getPhases(),
+          appliedFilters ? searchPhases(appliedFilters) : null,
+        ]);
 
         if (ignore) {
           return;
         }
 
-        setPhases(data);
+        setPhases(searchResults ?? data);
         setAllPhases(data);
         setLoadError(null);
       } catch (error) {
@@ -115,6 +125,7 @@ export default function PhasesPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -124,7 +135,7 @@ export default function PhasesPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [appliedFilters, reloadCount, t]);
 
   useEffect(() => {
     let ignore = false;
@@ -196,35 +207,18 @@ export default function PhasesPage() {
     nameFilter.trim() !== '' ||
     dateFilter !== '';
 
-  async function handleSearch() {
-    try {
-      setIsSearching(true);
-      setLoadError(null);
-
-      const data = await searchPhases({
-        name: nameFilter.trim() || undefined,
-        active_date: dateFilter || undefined,
-      });
-
-      setPhases(data);
-      setHasSearched(true);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('common.unknownError'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+  function handleSearch() {
+    setIsSearching(true);
+    setAppliedFilters({
+      name: nameFilter.trim() || undefined,
+      active_date: dateFilter || undefined,
+    });
   }
 
   function clearFilters() {
     setNameFilter('');
     setDateFilter('');
-    setHasSearched(false);
-    setPhases(allPhases);
+    setAppliedFilters(null);
   }
 
   function openCreateModal() {
@@ -376,7 +370,7 @@ export default function PhasesPage() {
         }
       />
 
-      {!loading && !loadError && (
+      {!loading && (!loadError || hasSearched) && (
         <div className="phases-toolbar">
           <div className="phases-filters">
             <Input
@@ -403,7 +397,7 @@ export default function PhasesPage() {
           <div className="phases-toolbar-footer">
             <Button
               type="button"
-              onClick={() => void handleSearch()}
+              onClick={handleSearch}
               disabled={isSearching}
             >
               {isSearching

@@ -16,6 +16,7 @@ import {
   searchStadiums,
   updateStadium,
   type StadiumFormData,
+  type StadiumSearchFilters,
 } from '../api/stadiums';
 import type { Stadium } from '../types/stadium';
 import { useAuth } from '../auth/use-auth';
@@ -49,15 +50,16 @@ export default function StadiumsPage() {
   const [stadiums, setStadiums] = useState<Stadium[]>(
     [],
   );
-  const [allStadiums, setAllStadiums] = useState<Stadium[]>(
-    [],
-  );
 
   const [nameFilter, setNameFilter] = useState('');
   const [provinceFilter, setProvinceFilter] = useState('');
   const [capacityFilter, setCapacityFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<StadiumSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<
@@ -89,14 +91,15 @@ export default function StadiumsPage() {
 
     async function loadStadiums() {
       try {
-        const data = await getStadiums();
+        const data = appliedFilters
+          ? await searchStadiums(appliedFilters)
+          : await getStadiums();
 
         if (ignore) {
           return;
         }
 
         setStadiums(data);
-        setAllStadiums(data);
         setLoadError(null);
       } catch (error) {
         if (!ignore) {
@@ -110,6 +113,7 @@ export default function StadiumsPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -119,7 +123,7 @@ export default function StadiumsPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [appliedFilters, reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectStadiumsEvents({
@@ -131,10 +135,14 @@ export default function StadiumsPage() {
     return disconnect;
   }, []);
 
+  function reloadStadiums() {
+    setReloadCount((count) => count + 1);
+  }
+
   function retryLoad() {
     setLoading(true);
     setLoadError(null);
-    setReloadCount((count) => count + 1);
+    reloadStadiums();
   }
 
   const hasActiveFilters =
@@ -142,44 +150,25 @@ export default function StadiumsPage() {
     provinceFilter.trim() !== '' ||
     capacityFilter.trim() !== '';
 
-  async function handleSearch() {
-    try {
-      setIsSearching(true);
-      setLoadError(null);
+  function handleSearch() {
+    const normalizedCapacity = capacityFilter.trim();
 
-      const normalizedCapacity =
-        capacityFilter.trim();
-
-      const data = await searchStadiums({
-        name: nameFilter.trim() || undefined,
-        province:
-          provinceFilter.trim() || undefined,
-        capacity:
-          normalizedCapacity !== ''
-            ? Number(normalizedCapacity)
-            : undefined,
-      });
-
-      setStadiums(data);
-      setHasSearched(true);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('stadiums.loadError'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+    setIsSearching(true);
+    setAppliedFilters({
+      name: nameFilter.trim() || undefined,
+      province: provinceFilter.trim() || undefined,
+      capacity:
+        normalizedCapacity !== ''
+          ? Number(normalizedCapacity)
+          : undefined,
+    });
   }
 
   function clearFilters() {
     setNameFilter('');
     setProvinceFilter('');
     setCapacityFilter('');
-    setHasSearched(false);
-    setStadiums(allStadiums);
+    setAppliedFilters(null);
   }
 
   function openCreateModal() {
@@ -212,30 +201,16 @@ export default function StadiumsPage() {
 
     try {
       if (editingStadium) {
-        const updated = await updateStadium(
+        await updateStadium(
           editingStadium.stadium_id,
           data,
         );
-
-        setStadiums((current) =>
-          current.map((stadium) =>
-            stadium.stadium_id ===
-            updated.stadium_id
-              ? updated
-              : stadium,
-          ),
-        );
       } else {
-        const created =
-          await createStadium(data);
-
-        setStadiums((current) => [
-          ...current,
-          created,
-        ]);
+        await createStadium(data);
       }
 
       closeModal();
+      reloadStadiums();
     } catch (error) {
       setFormError(
         getApiErrorMessage(
@@ -275,15 +250,8 @@ export default function StadiumsPage() {
         deleteTarget.stadium_id,
       );
 
-      setStadiums((current) =>
-        current.filter(
-          (stadium) =>
-            stadium.stadium_id !==
-            deleteTarget.stadium_id,
-        ),
-      );
-
       closeDeleteDialog();
+      reloadStadiums();
     } catch (error) {
       setDeleteError(
         getApiErrorMessage(
@@ -393,7 +361,7 @@ export default function StadiumsPage() {
         }
       />
 
-      {!loading && !loadError && (
+      {!loading && (!loadError || hasSearched) && (
         <div className="stadiums-toolbar">
           <div className="stadiums-filters">
             <Input
@@ -434,7 +402,7 @@ export default function StadiumsPage() {
           <div className="stadiums-toolbar-footer">
             <Button
               type="button"
-              onClick={() => void handleSearch()}
+              onClick={handleSearch}
               disabled={isSearching}
             >
               {isSearching

@@ -13,6 +13,7 @@ import {
   searchCoaches,
   updateCoach,
 } from '../api/coaches';
+import type { CoachSearchFilters } from '../api/coaches';
 import { getTeams } from '../api/teams';
 import { getApiErrorMessage } from '../api/api-error';
 import { useAuth } from '../auth/use-auth';
@@ -55,7 +56,11 @@ export default function CoachesPage() {
   const [yearsOnTeamFilter, setYearsOnTeamFilter] = useState('');
   const [yearsExperienceFilter, setYearsExperienceFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  // Filtros de la última búsqueda (null = lista completa): toda recarga
+  // (eventos, tras guardar o borrar, reintentar) repite esa misma consulta.
+  const [appliedFilters, setAppliedFilters] =
+    useState<CoachSearchFilters | null>(null);
+  const hasSearched = appliedFilters !== null;
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] =
@@ -87,7 +92,9 @@ export default function CoachesPage() {
       try {
         const [coachesData, teamsData] =
           await Promise.all([
-            getCoaches(),
+            appliedFilters
+              ? searchCoaches(appliedFilters)
+              : getCoaches(),
             getTeams(),
           ]);
 
@@ -110,6 +117,7 @@ export default function CoachesPage() {
       } finally {
         if (!ignore) {
           setLoading(false);
+          setIsSearching(false);
         }
       }
     }
@@ -119,7 +127,7 @@ export default function CoachesPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [appliedFilters, reloadCount, t]);
 
   useEffect(() => {
     const disconnect = connectCoachesEvents({
@@ -148,69 +156,40 @@ export default function CoachesPage() {
     yearsOnTeamFilter.trim() !== '' ||
     yearsExperienceFilter.trim() !== '';
 
-  async function handleSearch() {
+  function handleSearch() {
     setIsSearching(true);
-    setLoadError(null);
-
-    try {
-      const data = await searchCoaches({
-        ...(numberFilter.trim()
-          ? { number: Number(numberFilter) }
-          : {}),
-        ...(nameFilter.trim()
-          ? { name: nameFilter.trim() }
-          : {}),
-        ...(teamFilter.trim()
-          ? { team: teamFilter.trim() }
-          : {}),
-        ...(yearsOnTeamFilter.trim()
-          ? {
-              years_on_team:
-                Number(yearsOnTeamFilter),
-            }
-          : {}),
-        ...(yearsExperienceFilter.trim()
-          ? {
-              years_experience:
-                Number(yearsExperienceFilter),
-            }
-          : {}),
-      });
-
-      setCoaches(data);
-      setHasSearched(true);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('coaches.loadError'),
-        ),
-      );
-    } finally {
-      setIsSearching(false);
-    }
+    setAppliedFilters({
+      ...(numberFilter.trim()
+        ? { number: Number(numberFilter) }
+        : {}),
+      ...(nameFilter.trim()
+        ? { name: nameFilter.trim() }
+        : {}),
+      ...(teamFilter.trim()
+        ? { team: teamFilter.trim() }
+        : {}),
+      ...(yearsOnTeamFilter.trim()
+        ? {
+            years_on_team:
+              Number(yearsOnTeamFilter),
+          }
+        : {}),
+      ...(yearsExperienceFilter.trim()
+        ? {
+            years_experience:
+              Number(yearsExperienceFilter),
+          }
+        : {}),
+    });
   }
 
-  async function clearFilters() {
+  function clearFilters() {
     setNameFilter('');
     setNumberFilter('');
     setTeamFilter('');
     setYearsOnTeamFilter('');
     setYearsExperienceFilter('');
-    setLoadError(null);
-
-    try {
-      const data = await getCoaches();
-      setCoaches(data);
-      setHasSearched(false);
-    } catch (error) {
-      setLoadError(
-        getApiErrorMessage(
-          error,
-          t('coaches.loadError'),
-        ),
-      );
-    }
+    setAppliedFilters(null);
   }
 
   function openCreateModal() {
@@ -407,7 +386,7 @@ export default function CoachesPage() {
         }
       />
 
-      {!loading && !loadError && (
+      {!loading && (!loadError || hasSearched) && (
         <div className="coaches-toolbar">
           <div className="coaches-filters">
             <Input
@@ -478,7 +457,7 @@ export default function CoachesPage() {
           <div className="coaches-toolbar-footer">
             <Button
               type="button"
-              onClick={() => void handleSearch()}
+              onClick={handleSearch}
               disabled={isSearching}
             >
               {isSearching
@@ -494,7 +473,7 @@ export default function CoachesPage() {
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => void clearFilters()}
+                onClick={clearFilters}
               >
                 {t('coaches.clearFilters')}
               </Button>
