@@ -40,3 +40,6 @@ coverage/
 *.tmp
 backend/.npmrc
 backend/Profile.pdf
+BNS-cambios.pptx
+CHANGELOG-tecnico.pdf
+backend/Guía para revisar y aceptar los PR de BNS.pdf
