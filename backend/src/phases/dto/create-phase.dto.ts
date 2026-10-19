@@ -1,4 +1,4 @@
-import { IsIn } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
 import { IsDateOnly } from '../../common/validators/is-date-only.decorator';
 import { PHASE_NAMES } from '../series-phases';
 
@@ -13,4 +13,10 @@ export class CreatePhaseDto {
 
   @IsDateOnly()
   end_date: string;
+
+  /** Temporada de la fase; por defecto, la más reciente. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  season_id?: number;
 }

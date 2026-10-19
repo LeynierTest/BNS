@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../prisma/prisma.module';
 import { StandingsModule } from '../standings/standings.module';
 import { MatchesByTeamsModule } from '../matches-by-teams/matches-by-teams.module';
 import { MatchesByDateModule } from '../matches-by-date/matches-by-date.module';
@@ -11,6 +12,7 @@ import { ReportsService } from './reports.service';
 
 @Module({
   imports: [
+    PrismaModule,
     StandingsModule,
     MatchesByTeamsModule,
     MatchesByDateModule,

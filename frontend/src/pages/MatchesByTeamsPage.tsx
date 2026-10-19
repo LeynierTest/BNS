@@ -17,9 +17,11 @@ import type { Team } from '../types/team';
 import './MatchesByTeamsPage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { useSelectedSeason } from '../season/use-season';
 
 export function MatchesByTeamsPage() {
   const { t } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
@@ -101,6 +103,7 @@ export function MatchesByTeamsPage() {
       const data = await getMatchesByTeams(
         Number(homeTeamId),
         Number(awayTeamId),
+        seasonId,
       );
 
       setMatches(data);
@@ -260,7 +263,7 @@ export function MatchesByTeamsPage() {
         <>
           <div className="report-actions">
             <PdfDownloadButton
-              endpoint={`/reports/pdf/matches-by-teams/${homeTeamId}/${awayTeamId}`}
+              endpoint={`/reports/pdf/matches-by-teams/${homeTeamId}/${awayTeamId}?season_id=${seasonId}`}
               filename="partidos-por-equipos.pdf"
             />
             <EmailReportButton
@@ -268,6 +271,7 @@ export function MatchesByTeamsPage() {
               params={{
                 homeTeamId: Number(homeTeamId),
                 awayTeamId: Number(awayTeamId),
+                seasonId,
               }}
             />
           </div>

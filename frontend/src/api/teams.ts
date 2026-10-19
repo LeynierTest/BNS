@@ -42,12 +42,14 @@ export async function getTeam(
   return response.data;
 }
 
+/** Crea el equipo y lo inscribe en la temporada (debe no haber empezado). */
 export async function createTeam(
   data: TeamFormData,
+  seasonId: number,
 ): Promise<Team> {
   const response = await api.post<Team>(
     '/teams',
-    data,
+    { ...data, season_id: seasonId },
   );
 
   return response.data;

@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { QualificationService } from '../qualification/qualification.service';
-import { UNSAVED_ID } from '../qualification/series-qualification';
+import {
+  assertSeasonNotStarted,
+  resolveSeasonId,
+} from '../seasons/season-scope';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 
@@ -69,22 +72,27 @@ export class TeamsService {
       );
     }
 
-    // Un equipo nuevo juega la Primera Ronda: no puede reabrir un corte del
-    // que ya dependen partidos de fases posteriores.
-    const createdTeam =
-      await this.qualificationService.runConsistentWrite({
-        simulate: (snapshot) => ({
-          ...snapshot,
-          teams: [
-            ...snapshot.teams,
-            { team_id: UNSAVED_ID, name: data.name },
-          ],
-        }),
-        write: (tx) =>
-          tx.team.create({
-            data,
-          }),
-      });
+    // Decisión del equipo: un equipo nuevo se inscribe en la temporada
+    // (la indicada o la más reciente) y solo antes de que empiece, para no
+    // entrar en una competición en curso.
+    const { season_id: requestedSeasonId, ...teamData } = data;
+    const seasonId = await resolveSeasonId(this.prisma, requestedSeasonId);
+
+    const createdTeam = await this.qualificationService.runLocked(
+      async (tx) => {
+        await assertSeasonNotStarted(tx, seasonId, 'añadir equipos');
+
+        const team = await tx.team.create({
+          data: teamData,
+        });
+
+        await tx.season_team.create({
+          data: { season_id: seasonId, team_id: team.team_id },
+        });
+
+        return team;
+      },
+    );
 
     this.teamsEventsService.emit('team.created', createdTeam);
 
@@ -124,55 +132,59 @@ export class TeamsService {
    * Solo se elimina un equipo sin historial (p. ej. creado por error). Sus
    * peloteros y partidos forman parte de la Serie: borrarlos en cascada
    * cambiaría la tabla, los reportes y la clasificación de los demás
-   * equipos, así que se rechaza explicando qué lo impide. La comprobación
-   * corre dentro de la transacción con el bloqueo de escrituras de la Serie
-   * (las altas de partidos lo toman); las claves foráneas cubren el resto.
+   * equipos, así que se rechaza explicando qué lo impide. Tampoco si está
+   * inscrito en una temporada ya empezada (cambiaría quién la juega). La
+   * comprobación corre con el bloqueo de escrituras de la Serie (las altas
+   * de partidos lo toman); las claves foráneas cubren el resto.
    */
   async deleteTeam(id: number) {
     const team = await this.getTeamById(id);
 
-    const deletedTeam =
-      await this.qualificationService.runConsistentWrite({
-        validate: async (tx) => {
-          const [members, matches] = await Promise.all([
-            tx.team_member.count({
-              where: {
-                team_id: id,
-              },
-            }),
-            tx.match.count({
-              where: {
-                OR: [{ away_team_id: id }, { home_team_id: id }],
-              },
-            }),
-          ]);
-
-          if (members > 0 || matches > 0) {
-            const history = [
-              members > 0 &&
-                `${members} ${members === 1 ? 'pelotero' : 'peloteros'}`,
-              matches > 0 &&
-                `${matches} ${matches === 1 ? 'partido' : 'partidos'}`,
-            ]
-              .filter(Boolean)
-              .join(' y ');
-
-            throw new BadRequestException(
-              `No se puede eliminar ${team.name} porque tiene historial en la Serie (${history}). Solo se puede eliminar un equipo sin peloteros ni partidos`,
-            );
-          }
-        },
-        simulate: (snapshot) => ({
-          ...snapshot,
-          teams: snapshot.teams.filter((current) => current.team_id !== id),
-        }),
-        write: (tx) =>
-          tx.team.delete({
+    const deletedTeam = await this.qualificationService.runLocked(
+      async (tx) => {
+        const [members, matches, seasons] = await Promise.all([
+          tx.team_member.count({
             where: {
               team_id: id,
             },
           }),
-      });
+          tx.match.count({
+            where: {
+              OR: [{ away_team_id: id }, { home_team_id: id }],
+            },
+          }),
+          tx.season_team.findMany({
+            where: { team_id: id },
+            select: { season_id: true },
+          }),
+        ]);
+
+        if (members > 0 || matches > 0) {
+          const history = [
+            members > 0 &&
+              `${members} ${members === 1 ? 'pelotero' : 'peloteros'}`,
+            matches > 0 &&
+              `${matches} ${matches === 1 ? 'partido' : 'partidos'}`,
+          ]
+            .filter(Boolean)
+            .join(' y ');
+
+          throw new BadRequestException(
+            `No se puede eliminar ${team.name} porque tiene historial en la Serie (${history}). Solo se puede eliminar un equipo sin peloteros ni partidos`,
+          );
+        }
+
+        for (const { season_id } of seasons) {
+          await assertSeasonNotStarted(tx, season_id, `eliminar ${team.name}`);
+        }
+
+        return tx.team.delete({
+          where: {
+            team_id: id,
+          },
+        });
+      },
+    );
 
     this.teamsEventsService.emit('team.deleted', deletedTeam);
 

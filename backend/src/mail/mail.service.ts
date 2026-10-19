@@ -185,7 +185,7 @@ export class MailService {
     switch (dto.report) {
       case ReportType.STANDINGS:
         return {
-          content: await this.reportsService.standingsPdf(),
+          content: await this.reportsService.standingsPdf(dto.seasonId),
           title: 'Tabla de Posiciones',
           filename: 'tabla-posiciones.pdf',
         };
@@ -201,6 +201,7 @@ export class MailService {
           content: await this.reportsService.matchesByTeamsPdf(
             dto.homeTeamId,
             dto.awayTeamId,
+            dto.seasonId,
           ),
           title: 'Partidos entre Equipos',
           filename: 'partidos-entre-equipos.pdf',
@@ -217,6 +218,7 @@ export class MailService {
           content: await this.reportsService.matchesByDatePdf(
             dto.date,
             dto.stadiumId,
+            dto.seasonId,
           ),
           title: `Partidos del ${dto.date}`,
           filename: 'partidos-por-fecha.pdf',
@@ -231,7 +233,9 @@ export class MailService {
 
       case ReportType.STADIUM_ATTENDANCE:
         return {
-          content: await this.reportsService.stadiumAttendancePdf(),
+          content: await this.reportsService.stadiumAttendancePdf(
+            dto.seasonId,
+          ),
           title: 'Asistencia por Estadio',
           filename: 'asistencia-estadios.pdf',
         };
@@ -244,7 +248,10 @@ export class MailService {
         }
 
         return {
-          content: await this.reportsService.teamStatusPdf(dto.teamId),
+          content: await this.reportsService.teamStatusPdf(
+            dto.teamId,
+            dto.seasonId,
+          ),
           title: 'Estado del Equipo por Fase',
           filename: 'estado-equipo.pdf',
         };

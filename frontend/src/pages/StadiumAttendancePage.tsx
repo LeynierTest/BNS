@@ -11,9 +11,11 @@ import { getApiErrorMessage } from '../api/api-error';
 import './StadiumAttendancePage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { useSelectedSeason } from '../season/use-season';
 
 export function StadiumAttendancePage() {
   const { t } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const [stadiums, setStadiums] = useState<StadiumAttendance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ export function StadiumAttendancePage() {
       setError(null);
 
       try {
-        const data = await getStadiumAttendance();
+        const data = await getStadiumAttendance(seasonId);
 
         if (active) {
           setStadiums(data);
@@ -53,7 +55,7 @@ export function StadiumAttendancePage() {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [seasonId, t]);
 
   const columns = [
     {
@@ -137,10 +139,13 @@ export function StadiumAttendancePage() {
         <>
           <div className="report-actions">
             <PdfDownloadButton
-              endpoint="/reports/pdf/stadium-attendance"
+              endpoint={`/reports/pdf/stadium-attendance?season_id=${seasonId}`}
               filename="asistencia-por-estadio.pdf"
             />
-            <EmailReportButton report="stadium-attendance" />
+            <EmailReportButton
+              report="stadium-attendance"
+              params={{ seasonId }}
+            />
           </div>
 
           <DataTable

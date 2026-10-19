@@ -18,9 +18,11 @@ import type { Stadium } from '../types/stadium';
 import './MatchesByDatePage.css';
 import { PdfDownloadButton } from '../components/ui/PdfDownloadButton';
 import EmailReportButton from '../components/ui/EmailReportButton';
+import { useSelectedSeason } from '../season/use-season';
 
 export function MatchesByDatePage() {
   const { t } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const [date, setDate] = useState('');
   const [stadiumId, setStadiumId] = useState('');
@@ -99,6 +101,7 @@ export function MatchesByDatePage() {
         stadiumId
           ? Number(stadiumId)
           : undefined,
+        seasonId,
       );
 
       setMatches(data);
@@ -238,13 +241,14 @@ export function MatchesByDatePage() {
         <>
           <div className="report-actions">
             <PdfDownloadButton
-              endpoint={`/reports/pdf/matches-by-date/${date}${stadiumId ? `?stadiumId=${stadiumId}` : ''}`}
+              endpoint={`/reports/pdf/matches-by-date/${date}?season_id=${seasonId}${stadiumId ? `&stadiumId=${stadiumId}` : ''}`}
               filename="partidos-por-fecha.pdf"
             />
             <EmailReportButton
               report="matches-by-date"
               params={{
                 date,
+                seasonId,
                 ...(stadiumId
                   ? { stadiumId: Number(stadiumId) }
                   : {}),

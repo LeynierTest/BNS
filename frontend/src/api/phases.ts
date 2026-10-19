@@ -20,8 +20,11 @@ function normalizePhase(value: any): Phase {
   };
 }
 
-export async function getPhases(): Promise<Phase[]> {
-  const response = await api<any[]>('/phases');
+/** Fases de una temporada. */
+export async function getPhases(seasonId: number): Promise<Phase[]> {
+  const response = await api<any[]>('/phases', {
+    params: { season_id: seasonId },
+  });
 
   return response.data.map(normalizePhase);
 }
@@ -33,8 +36,9 @@ export interface PhaseSearchFilters {
 
 export async function searchPhases(
   filters: PhaseSearchFilters,
+  seasonId: number,
 ): Promise<Phase[]> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ season_id: String(seasonId) });
 
   if (filters.name?.trim()) {
     params.set('name', filters.name.trim());
@@ -63,10 +67,11 @@ export async function getPhase(
 
 export async function createPhase(
   data: PhaseFormData,
+  seasonId: number,
 ): Promise<Phase> {
   const response = await api<any>('/phases', {
     method: 'POST',
-    data,
+    data: { ...data, season_id: seasonId },
   });
 
   return normalizePhase(response.data);

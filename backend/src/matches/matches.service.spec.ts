@@ -18,6 +18,7 @@ const phase = {
   name: 'Primera Ronda',
   start_date: new Date('2026-10-01T00:00:00.000Z'),
   end_date: new Date('2026-10-31T00:00:00.000Z'),
+  season_id: 1,
 };
 
 const stadiums = [
@@ -234,6 +235,7 @@ describe('MatchesService', () => {
         home_score: 5,
         attendance: 30000,
         tiebreaker: false,
+        phase: { season_id: 1 },
       });
     });
 
@@ -298,7 +300,10 @@ describe('MatchesService', () => {
 
   describe('deleteMatch', () => {
     it('valida la regla 8/4/2 sin el partido antes de borrarlo', async () => {
-      prisma.match.findUnique.mockResolvedValue({ match_id: 10 });
+      prisma.match.findUnique.mockResolvedValue({
+        match_id: 10,
+        phase: { season_id: 1 },
+      });
       Object.assign(prisma.match, {
         delete: jest.fn().mockResolvedValue({ match_id: 10 }),
       });

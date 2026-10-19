@@ -42,8 +42,9 @@ export async function createTestApp(): Promise<TestContext> {
 }
 
 /**
- * Deja la base de pruebas en un estado conocido: sin datos de dominio y
- * con un Administrator y un Usuario. Los roles los siembra la migración.
+ * Deja la base de pruebas en un estado conocido: sin datos de dominio, con
+ * la Serie y la temporada por defecto, y con un Administrator y un Usuario.
+ * Los roles los siembra la migración.
  */
 export async function resetDatabase(
   prisma: PrismaService,
@@ -54,12 +55,24 @@ export async function resetDatabase(
       player,
       coach,
       team_member,
+      season_team,
       team,
       stadium,
       phase,
+      season,
+      series,
       app_user
     RESTART IDENTITY CASCADE
   `;
+
+  // Como deja la migración de temporadas: una Serie con una temporada, en la
+  // que se inscriben los equipos que se creen.
+  await prisma.series.create({
+    data: {
+      name: 'Serie Nacional de Béisbol',
+      season: { create: { name: 'Temporada 1' } },
+    },
+  });
 
   const [adminHash, userHash] = await Promise.all([
     bcrypt.hash(ADMIN.password, 4),

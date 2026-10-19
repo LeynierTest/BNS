@@ -172,6 +172,27 @@ Piezas transversales (no repetir su lógica en cada módulo):
   puede pedir 5 reportes por correo cada 10 minutos.
 - Reportes por correo: un User solo puede enviarlos a su propio correo (403
   si pide otro, y es el destino por defecto); un Administrator, a cualquiera.
+- **Series y temporadas** — pedido del equipo (2026-10-18), ampliación del
+  enunciado (que habla de una sola Serie):
+  - Una Serie (`series`) es la competición; se juega en temporadas
+    (`season`). Cada temporada tiene sus fases (`phase.season_id`; nombres
+    únicos por temporada) y partidos, e inscribe a sus equipos
+    (`season_team`). Equipos, peloteros, entrenadores y estadios son comunes;
+    las estadísticas de los peloteros son globales (el equipo todos estrellas
+    y los entrenadores destacados no van por temporada).
+  - La regla 8/4/2, la tabla y los reportes 1, 2, 3, 5 y 6 van por
+    temporada: la Primera Ronda la juegan los equipos inscritos.
+  - Los equipos de una temporada solo cambian **antes de que empiece** (su
+    primer partido): un equipo nuevo se inscribe en la temporada (la indicada
+    o la más reciente) y se rechaza si ya empezó; tampoco se elimina un
+    equipo inscrito en una temporada empezada. Un partido no se mueve a una
+    fase de otra temporada.
+  - API: los endpoints por temporada aceptan `?season_id=` (cuerpo
+    `season_id` al crear fases o equipos); sin él, la temporada más reciente
+    (`seasons/season-scope.ts`). `GET /series`, `GET/POST /seasons`,
+    `GET/PUT /seasons/:id/teams`.
+  - La migración `20261019000000_add_seasons` pasa los datos existentes a
+    "Serie Nacional de Béisbol — Temporada 1" con todos los equipos.
 - Borrado de equipos: solo se elimina un equipo sin historial (sin
   peloteros ni partidos, p. ej. creado por error). Con historial se rechaza
   (400) diciendo qué lo impide; no hay borrado en cascada ni "archivado",
@@ -265,6 +286,12 @@ Piezas transversales (no repetir su lógica en cada módulo):
   props → estado con effects (borraban lo editado al re-renderizar el padre).
 - Fechas `DATE` del backend: formatear cortando `YYYY-MM-DD` o con
   `timeZone: 'UTC'`; en hora local (America/Havana, UTC-4) salen un día antes.
+- Temporada elegida: `SeasonProvider` (en `AppLayout`) la carga y la
+  recuerda; las páginas la leen con `useSelectedSeason()` (solo se muestran
+  cuando hay una), la pasan a `src/api` y la ponen en las dependencias de
+  sus efectos. Se elige y se crea desde el Dashboard (`SeasonPanel`,
+  `SeasonForm`, `SeasonTeamsForm`). En pruebas, `renderAs()` aporta
+  `TEST_SEASON`.
 - Regla 8/4/2 en la interfaz: `components/ui/match-form-rules.ts` replica la
   validación del backend para `MatchForm` (funciones puras que devuelven
   clave de traducción + valores); `PhaseQualificationPanel` (en
@@ -349,8 +376,8 @@ Notas de arranque:
   bugs reales** — antes de tocar algo que parezca un error de tipos en
   servicios de Prisma, correr `npx prisma generate` y volver a chequear.
 - Estado verificado (2026-10-18): backend y frontend compilan con `tsc` y
-  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 110 e2e;
-  frontend con 39 pruebas (Vitest).
+  pasan `oxlint` sin warnings; backend con 117 pruebas unitarias y 121 e2e;
+  frontend con 45 pruebas (Vitest).
   Los 12 `react/set-state-in-effect` del frontend están resueltos (ver el
   patrón de carga de datos en la sección de arquitectura frontend).
 - Migración `00000000000000_baseline`: es un `pg_dump` 18 adaptado a mano para

@@ -3,14 +3,17 @@ import type { MatchByDate } from '../types/matches-by-date';
 
 export async function getMatchesByDate(
   date: string,
-  stadiumId?: number,
+  stadiumId: number | undefined,
+  seasonId: number,
 ): Promise<MatchByDate[]> {
-  const query = stadiumId
-    ? `?stadiumId=${stadiumId}`
-    : '';
-
-  const response = await api<MatchByDate[]>(
-    `/matches/by-date/${date}${query}`,
+  const response = await api.get<MatchByDate[]>(
+    `/matches/by-date/${date}`,
+    {
+      params: {
+        season_id: seasonId,
+        ...(stadiumId ? { stadiumId } : {}),
+      },
+    },
   );
 
   return response.data;

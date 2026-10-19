@@ -568,18 +568,12 @@ describe('Fases de la Serie (e2e)', () => {
     );
   });
 
-  it('no deja crear un equipo que reabriría un corte ya usado', async () => {
-    // Hasta 8 equipos todos pasan de Primera Ronda sin jugarla.
-    for (const name of ['C', 'D', 'E', 'F', 'G', 'H']) {
-      await createTeam(admin, { name: `Equipo ${name}` });
-    }
-
-    // Con 9 ya habría que jugar Primera Ronda para saber quién pasó, y el
-    // partido de Segunda Ronda dejaría de ser válido.
+  it('no deja añadir equipos a una temporada que ya empezó', async () => {
+    const before = await ctx.prisma.team.count();
     const response = await admin
       .post('/teams')
       .send({
-        name: 'Equipo I',
+        name: 'Equipo nuevo',
         province: 'Holguín',
         championships_participated: 0,
         championships_won: 0,
@@ -588,9 +582,9 @@ describe('Fases de la Serie (e2e)', () => {
       })
       .expect(400);
 
-    expect(response.body.message).toContain(
-      'No se pueden registrar partidos de Segunda Ronda: todavía no se sabe qué equipos clasifican de Primera Ronda',
+    expect(response.body.message).toBe(
+      'La temporada Temporada 1 de Serie Nacional de Béisbol ya empezó (tiene partidos registrados): no se permite añadir equipos',
     );
-    expect(await ctx.prisma.team.count()).toBe(8);
+    expect(await ctx.prisma.team.count()).toBe(before);
   });
 });

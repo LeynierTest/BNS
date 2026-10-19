@@ -50,4 +50,10 @@ export class SendReportEmailDto {
   @Type(() => Number)
   @IsInt()
   teamId?: number;
+
+  /** Temporada del reporte; por defecto, la más reciente. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  seasonId?: number;
 }

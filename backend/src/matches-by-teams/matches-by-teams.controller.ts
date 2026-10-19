@@ -1,4 +1,4 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import { MatchesByTeamsService } from './matches-by-teams.service';
 
 @Controller('matches')
@@ -11,10 +11,13 @@ export class MatchesByTeamsController {
   async getMatchesByTeams(
     @Param('homeTeamId', ParseIntPipe) homeTeamId: number,
     @Param('awayTeamId', ParseIntPipe) awayTeamId: number,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
   ) {
     return this.matchesByTeamsService.getMatchesByTeams(
       homeTeamId,
       awayTeamId,
+      seasonId,
     );
   }
 }

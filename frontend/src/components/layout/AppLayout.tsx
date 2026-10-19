@@ -2,13 +2,27 @@ import { useState } from 'react';
 import { Menu } from 'lucide-react';
 import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { SeasonProvider } from '../../season/season-provider';
+import { useSeason } from '../../season/use-season';
+import { seasonLabel } from '../../types/season';
+import { ErrorMessage } from '../ui/ErrorMessage';
+import { LoadingState } from '../ui/LoadingState';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Sidebar } from './Sidebar';
 import './AppLayout.css';
 
 export function AppLayout() {
+  return (
+    <SeasonProvider>
+      <AppShell />
+    </SeasonProvider>
+  );
+}
+
+function AppShell() {
   const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { selectedSeason, loading, error } = useSeason();
 
   return (
     <div className="app-shell">
@@ -50,11 +64,30 @@ export function AppLayout() {
             <h1>{t('header.title')}</h1>
           </div>
 
-          <LanguageSwitcher />
+          <div className="app-header-actions">
+            {selectedSeason && (
+              <span
+                className="app-header-season"
+                title={t('seasons.changeInDashboard')}
+              >
+                {t('seasons.viewing')}: {seasonLabel(selectedSeason)}
+              </span>
+            )}
+
+            <LanguageSwitcher />
+          </div>
         </header>
 
         <main className="app-content">
-          <Outlet />
+          {/* Las páginas trabajan sobre la temporada elegida: se muestran
+              cuando ya hay una. */}
+          {selectedSeason ? (
+            <Outlet />
+          ) : loading ? (
+            <LoadingState message={t('seasons.loading')} />
+          ) : (
+            <ErrorMessage message={error ?? t('seasons.empty')} />
+          )}
         </main>
       </div>
     </div>

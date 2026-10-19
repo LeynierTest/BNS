@@ -137,8 +137,11 @@ function toBackendData(data: MatchFormData) {
   };
 }
 
-export async function getMatches(): Promise<Match[]> {
-  const response = await api<any[]>('/matches');
+/** Partidos de una temporada. */
+export async function getMatches(seasonId: number): Promise<Match[]> {
+  const response = await api<any[]>('/matches', {
+    params: { season_id: seasonId },
+  });
   return response.data.map(normalizeMatch);
 }
 
@@ -152,8 +155,9 @@ export interface MatchSearchFilters {
 
 export async function searchMatches(
   filters: MatchSearchFilters,
+  seasonId: number,
 ): Promise<Match[]> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ season_id: String(seasonId) });
 
   if (filters.away_team?.trim()) {
     params.set('away_team', filters.away_team.trim());

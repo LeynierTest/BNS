@@ -27,8 +27,11 @@ export class PhasesController {
   ) {}
 
   @Get()
-  async getAllPhases() {
-    return this.phasesService.getAllPhases();
+  async getAllPhases(
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
+  ) {
+    return this.phasesService.getAllPhases(seasonId);
   }
 
   @Get('search')
@@ -36,10 +39,13 @@ export class PhasesController {
     @Query('name') name?: string,
     @Query('active_date', new ParseDateOnlyPipe({ optional: true }))
     activeDate?: string,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
   ) {
     return this.phasesService.searchPhases(
       name,
       activeDate,
+      seasonId,
     );
   }
   @Sse('events')

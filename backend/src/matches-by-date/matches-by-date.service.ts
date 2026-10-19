@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveSeasonId } from '../seasons/season-scope';
 
 type MatchByDate = {
   match_id: number;
@@ -20,7 +21,9 @@ export class MatchesByDateService {
   async getMatchesByDate(
     date: string,
     stadiumId?: number,
+    seasonId?: number,
   ): Promise<MatchByDate[]> {
+    const season = await resolveSeasonId(this.prisma, seasonId);
     const matches = await this.prisma.$queryRaw<
       {
         match_id: bigint;
@@ -36,7 +39,8 @@ export class MatchesByDateService {
     >`
       SELECT * FROM get_matches_by_date(
         ${date}::date,
-        ${stadiumId ?? null}
+        ${stadiumId ?? null},
+        ${season}
       )
     `;
 
