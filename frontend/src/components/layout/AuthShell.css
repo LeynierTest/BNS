@@ -596,3 +596,41 @@
     font-size: 1.85rem;
   }
 }
+
+/* Registro: mensajes por campo y enlace entre login y registro */
+.login-input-wrapper input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.login-field-error,
+.login-field-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.login-field-error {
+  color: var(--color-danger);
+}
+
+.login-field-hint {
+  color: var(--color-text-secondary);
+}
+
+.login-switch {
+  margin: 1.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.login-switch a {
+  color: var(--color-primary-800);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.login-switch a:hover,
+.login-switch a:focus-visible {
+  text-decoration: underline;
+}

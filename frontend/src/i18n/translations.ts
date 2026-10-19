@@ -850,6 +850,46 @@ export const resources = {
         error: 'No se pudo iniciar sesión.',
         securityNote: 'Conexión protegida y acceso controlado.',
         changeLanguage: 'Cambiar idioma',
+        noAccount: '¿No tienes cuenta?',
+        createAccount: 'Crear cuenta',
+      },
+
+      register: {
+        kicker: 'Nueva cuenta',
+        title: 'Crea tu cuenta',
+        description:
+          'Regístrate para consultar equipos, partidos, estadísticas y reportes de la Serie.',
+        username: 'Usuario',
+        usernamePlaceholder: 'Elige un nombre de usuario',
+        usernameHint:
+          'Entre 3 y 50 caracteres: letras sin tilde, números, punto, guion o guion bajo.',
+        email: 'Email',
+        emailPlaceholder: 'tu@correo.com',
+        password: 'Contraseña',
+        passwordPlaceholder: 'Crea una contraseña',
+        passwordHint:
+          'Entre 8 y 72 caracteres, con al menos una letra y un número.',
+        confirmPassword: 'Confirmar contraseña',
+        confirmPasswordPlaceholder: 'Repite la contraseña',
+        submit: 'Crear cuenta',
+        loading: 'Creando cuenta...',
+        error: 'No se pudo crear la cuenta.',
+        haveAccount: '¿Ya tienes cuenta?',
+        signIn: 'Inicia sesión',
+        validation: {
+          usernameLength:
+            'El usuario debe tener entre 3 y 50 caracteres.',
+          usernamePattern:
+            'Usa solo letras sin tilde, números, punto, guion o guion bajo.',
+          emailRequired: 'Escribe tu email.',
+          emailInvalid: 'El email no es válido.',
+          passwordLength:
+            'La contraseña debe tener entre 8 y 72 caracteres.',
+          passwordPattern:
+            'La contraseña debe tener al menos una letra y un número.',
+          confirmRequired: 'Repite la contraseña.',
+          confirmMismatch: 'Las contraseñas no coinciden.',
+        },
       },
 
       dashboard: {
@@ -1766,6 +1806,46 @@ export const resources = {
         error: 'Unable to sign in.',
         securityNote: 'Protected connection and controlled access.',
         changeLanguage: 'Change language',
+        noAccount: "Don't have an account?",
+        createAccount: 'Create account',
+      },
+
+      register: {
+        kicker: 'New account',
+        title: 'Create your account',
+        description:
+          'Sign up to explore teams, matches, statistics and reports from the Series.',
+        username: 'Username',
+        usernamePlaceholder: 'Choose a username',
+        usernameHint:
+          '3 to 50 characters: unaccented letters, numbers, dot, hyphen or underscore.',
+        email: 'Email',
+        emailPlaceholder: 'you@email.com',
+        password: 'Password',
+        passwordPlaceholder: 'Create a password',
+        passwordHint:
+          '8 to 72 characters, with at least one letter and one number.',
+        confirmPassword: 'Confirm password',
+        confirmPasswordPlaceholder: 'Repeat the password',
+        submit: 'Create account',
+        loading: 'Creating account...',
+        error: 'Unable to create the account.',
+        haveAccount: 'Already have an account?',
+        signIn: 'Sign in',
+        validation: {
+          usernameLength:
+            'The username must be 3 to 50 characters long.',
+          usernamePattern:
+            'Use only unaccented letters, numbers, dot, hyphen or underscore.',
+          emailRequired: 'Enter your email.',
+          emailInvalid: 'The email is not valid.',
+          passwordLength:
+            'The password must be 8 to 72 characters long.',
+          passwordPattern:
+            'The password must contain at least one letter and one number.',
+          confirmRequired: 'Repeat the password.',
+          confirmMismatch: 'The passwords do not match.',
+        },
       },
 
       dashboard: {

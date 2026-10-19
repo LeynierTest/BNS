@@ -39,6 +39,7 @@ export function renderAs(
     isAuthenticated: true,
     isLoading: false,
     login: async () => {},
+    register: async () => {},
     logout: async () => {},
     updatePhoto: async () => {},
     removePhoto: async () => {},

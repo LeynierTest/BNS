@@ -9,6 +9,7 @@ import {
   AuthContext,
   type AuthUser,
 } from './auth-context';
+import type { RegistrationData } from './registration-rules';
 
 type AuthResponse = {
   user: AuthUser;
@@ -66,6 +67,15 @@ export function AuthProvider({
     setUser(response.data.user);
   }
 
+  async function register(data: RegistrationData) {
+    const response = await api.post<AuthResponse>(
+      '/auth/register',
+      data,
+    );
+
+    setUser(response.data.user);
+  }
+
   async function logout() {
     try {
       await api.post('/auth/logout');
@@ -104,6 +114,7 @@ export function AuthProvider({
       isAuthenticated: user !== null,
       isLoading,
       login,
+      register,
       logout,
       updatePhoto,
       removePhoto,
