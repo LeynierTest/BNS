@@ -12,17 +12,30 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getApiErrorMessage } from '../api/api-error';
 import { getMatches } from '../api/matches';
 import { getPlayers } from '../api/players';
 import { getStadiums } from '../api/stadiums';
 import { getStandings } from '../api/standings';
 import { getTeams } from '../api/teams';
+import {
+  createSeason,
+  getSeasonTeams,
+  getSeries,
+  updateSeasonTeams,
+} from '../api/seasons';
 import { useAuth } from '../auth/use-auth';
+import { Modal } from '../components/ui/Modal';
+import { SeasonForm } from '../components/ui/SeasonForm';
+import { SeasonPanel } from '../components/ui/SeasonPanel';
+import { SeasonTeamsForm } from '../components/ui/SeasonTeamsForm';
+import { useSeason, useSelectedSeason } from '../season/use-season';
 import { connectDashboardEvents } from '../api/dashboard-events';
 import type { Match } from '../types/match';
 import type { Player } from '../types/player';
 import type { Stadium } from '../types/stadium';
 import type { Standing } from '../types/standing';
+import type { CreateSeasonData, Series } from '../types/season';
 import type { Team } from '../types/team';
 import './DashboardPage.css';
 
@@ -38,6 +51,19 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reloadCount, setReloadCount] = useState(0);
+
+  const { seasons, selectSeason, reloadSeasons } = useSeason();
+  const selectedSeason = useSelectedSeason();
+  const seasonId = selectedSeason.season_id;
+  const isAdministrator = user?.role === 'Administrator';
+  const [series, setSeries] = useState<Series[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  // Equipos inscritos que se editan (null = modal cerrado).
+  const [editingTeamIds, setEditingTeamIds] = useState<number[] | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const locale =
     i18n.resolvedLanguage === 'en'
@@ -56,12 +82,14 @@ export function DashboardPage() {
           playersData,
           stadiumsData,
           matchesData,
+          seriesData,
         ] = await Promise.all([
-          getStandings(),
+          getStandings(seasonId),
           getTeams(),
           getPlayers(),
           getStadiums(),
-          getMatches(),
+          getMatches(seasonId),
+          getSeries(),
         ]);
 
         if (ignore) {
@@ -73,6 +101,7 @@ export function DashboardPage() {
         setPlayers(playersData);
         setStadiums(stadiumsData);
         setMatches(matchesData);
+        setSeries(seriesData);
         setError('');
       } catch {
         if (!ignore) {
@@ -90,7 +119,7 @@ export function DashboardPage() {
     return () => {
       ignore = true;
     };
-  }, [reloadCount, t]);
+  }, [reloadCount, seasonId, t]);
 
   useEffect(() => {
     const disconnect =
@@ -102,6 +131,55 @@ export function DashboardPage() {
 
     return disconnect;
   }, []);
+
+  async function handleCreateSeason(data: CreateSeasonData) {
+    setCreateLoading(true);
+    setCreateError(null);
+
+    try {
+      const created = await createSeason(data);
+
+      setCreateOpen(false);
+      selectSeason(created.season_id);
+      reloadSeasons();
+    } catch (requestError) {
+      setCreateError(
+        getApiErrorMessage(requestError, t('seasons.createError')),
+      );
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
+  async function openEditTeams() {
+    setEditError(null);
+
+    try {
+      const enrolled = await getSeasonTeams(seasonId);
+
+      setEditingTeamIds(enrolled.map((team) => team.team_id));
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, t('seasons.loadError')));
+    }
+  }
+
+  async function handleUpdateTeams(teamIds: number[]) {
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      await updateSeasonTeams(seasonId, teamIds);
+      setEditingTeamIds(null);
+      reloadSeasons();
+      setReloadCount((count) => count + 1);
+    } catch (requestError) {
+      setEditError(
+        getApiErrorMessage(requestError, t('seasons.updateError')),
+      );
+    } finally {
+      setEditLoading(false);
+    }
+  }
 
   const recentMatches = useMemo(
     () =>
@@ -161,6 +239,60 @@ export function DashboardPage() {
         </div>
       )}
 
+      <SeasonPanel
+        seasons={seasons}
+        selectedSeason={selectedSeason}
+        canManage={isAdministrator}
+        onSelect={selectSeason}
+        onCreate={() => {
+          setCreateError(null);
+          setCreateOpen(true);
+        }}
+        onEditTeams={() => void openEditTeams()}
+      />
+
+      <Modal
+        open={createOpen}
+        title={t('seasons.createTitle')}
+        onClose={() => {
+          if (!createLoading) {
+            setCreateOpen(false);
+          }
+        }}
+      >
+        <SeasonForm
+          series={series}
+          teams={teams}
+          defaultSeriesId={selectedSeason.series_id}
+          loading={createLoading}
+          error={createError}
+          onSubmit={handleCreateSeason}
+          onCancel={() => setCreateOpen(false)}
+        />
+      </Modal>
+
+      <Modal
+        open={editingTeamIds !== null}
+        title={t('seasons.editTeamsTitle')}
+        onClose={() => {
+          if (!editLoading) {
+            setEditingTeamIds(null);
+          }
+        }}
+      >
+        {editingTeamIds && (
+          <SeasonTeamsForm
+            key={seasonId}
+            teams={teams}
+            initialTeamIds={editingTeamIds}
+            loading={editLoading}
+            error={editError}
+            onSubmit={handleUpdateTeams}
+            onCancel={() => setEditingTeamIds(null)}
+          />
+        )}
+      </Modal>
+
       <section className="dashboard-stats">
         <article className="dashboard-stat">
           <div className="dashboard-stat-top">
@@ -180,7 +312,7 @@ export function DashboardPage() {
           </div>
 
           <strong>
-            {loading ? '—' : teams.length}
+            {loading ? '—' : selectedSeason.team_count}
           </strong>
 
           <small>

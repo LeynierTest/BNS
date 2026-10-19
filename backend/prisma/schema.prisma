@@ -45,10 +45,44 @@ model match {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model phase {
   phase_id   Int      @id @default(autoincrement())
-  name       String   @unique(map: "phase_name_uq") @db.VarChar(50)
+  name       String   @db.VarChar(50)
   start_date DateTime @db.Date
   end_date   DateTime @db.Date
+  season_id  Int
   match      match[]
+  season     season   @relation(fields: [season_id], references: [season_id], onDelete: NoAction, onUpdate: NoAction, map: "phase_season_fk")
+
+  @@unique([season_id, name], map: "phase_season_name_uq")
+}
+
+/// Competición (p. ej. "Serie Nacional de Béisbol"); se juega en temporadas.
+model series {
+  series_id Int      @id @default(autoincrement())
+  name      String   @unique(map: "series_name_uq") @db.VarChar(100)
+  season    season[]
+}
+
+model season {
+  season_id   Int           @id @default(autoincrement())
+  series_id   Int
+  name        String        @db.VarChar(100)
+  created_at  DateTime      @default(now()) @db.Timestamp(3)
+  phase       phase[]
+  series      series        @relation(fields: [series_id], references: [series_id], onDelete: NoAction, onUpdate: NoAction, map: "season_series_fk")
+  season_team season_team[]
+
+  @@unique([series_id, name], map: "season_series_name_uq")
+}
+
+/// Equipos inscritos en cada temporada.
+model season_team {
+  season_id Int
+  team_id   Int
+  season    season @relation(fields: [season_id], references: [season_id], onDelete: Cascade, onUpdate: NoAction, map: "season_team_season_fk")
+  team      team   @relation(fields: [team_id], references: [team_id], onDelete: Cascade, onUpdate: NoAction, map: "season_team_team_fk")
+
+  @@id([season_id, team_id], map: "season_team_pkey")
+  @@index([team_id], map: "season_team_team_idx")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -95,6 +129,7 @@ model team {
   match_match_away_team_idToteam match[]       @relation("match_away_team_idToteam")
   match_match_home_team_idToteam match[]       @relation("match_home_team_idToteam")
   team_member                    team_member[]
+  season_team                    season_team[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

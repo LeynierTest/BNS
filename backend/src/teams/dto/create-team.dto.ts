@@ -1,5 +1,6 @@
 import {
   IsInt,
+  IsOptional,
   IsNotEmpty,
   IsString,
   MaxLength,
@@ -34,4 +35,13 @@ export class CreateTeamDto {
   @IsNotEmpty()
   @MaxLength(50)
   color: string;
+
+  /**
+   * Temporada en la que se inscribe (por defecto, la más reciente); debe no
+   * haber empezado.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  season_id?: number;
 }

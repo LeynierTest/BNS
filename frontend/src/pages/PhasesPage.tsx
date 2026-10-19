@@ -15,6 +15,7 @@ import { connectMatchesEvents } from '../api/matches-events';
 import { getPhaseQualification } from '../api/qualification';
 import { connectTeamsEvents } from '../api/teams-events';
 import { useAuth } from '../auth/use-auth';
+import { useSelectedSeason } from '../season/use-season';
 
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -62,6 +63,7 @@ function formatDate(value: string, locale: string) {
 
 export default function PhasesPage() {
   const { t, i18n } = useTranslation();
+  const { season_id: seasonId } = useSelectedSeason();
   const { user } = useAuth();
 
   const isAdministrator = user?.role === 'Administrator';
@@ -107,8 +109,8 @@ export default function PhasesPage() {
         // La lista completa también hace falta con una búsqueda activa: el
         // formulario valida nombre y fechas contra todas las fases.
         const [data, searchResults] = await Promise.all([
-          getPhases(),
-          appliedFilters ? searchPhases(appliedFilters) : null,
+          getPhases(seasonId),
+          appliedFilters ? searchPhases(appliedFilters, seasonId) : null,
         ]);
 
         if (ignore) {
@@ -135,14 +137,14 @@ export default function PhasesPage() {
     return () => {
       ignore = true;
     };
-  }, [appliedFilters, reloadCount, t]);
+  }, [appliedFilters, reloadCount, seasonId, t]);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadQualification() {
       try {
-        const data = await getPhaseQualification();
+        const data = await getPhaseQualification(seasonId);
 
         if (ignore) {
           return;
@@ -164,7 +166,7 @@ export default function PhasesPage() {
     return () => {
       ignore = true;
     };
-  }, [qualificationReloadCount, reloadCount, t]);
+  }, [qualificationReloadCount, reloadCount, seasonId, t]);
 
   useEffect(() => {
     const disconnect = connectPhasesEvents({
@@ -251,7 +253,7 @@ export default function PhasesPage() {
       if (editingPhase) {
         await updatePhase(editingPhase.phase_id, data);
       } else {
-        await createPhase(data);
+        await createPhase(data, seasonId);
       }
 
       closeModal();

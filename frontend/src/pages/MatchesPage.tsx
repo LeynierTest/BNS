@@ -21,6 +21,7 @@ import { getPhases } from '../api/phases';
 import { getPhaseQualification } from '../api/qualification';
 import { getApiErrorMessage } from '../api/api-error';
 import { useAuth } from '../auth/use-auth';
+import { useSelectedSeason } from '../season/use-season';
 
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -49,6 +50,7 @@ import './MatchesPage.css';
 export default function MatchesPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { season_id: seasonId } = useSelectedSeason();
 
   const isAdministrator =
     user?.role === 'Administrator';
@@ -109,12 +111,12 @@ export default function MatchesPage() {
           qualificationData,
         ] = await Promise.all([
           appliedFilters
-            ? searchMatches(appliedFilters)
-            : getMatches(),
+            ? searchMatches(appliedFilters, seasonId)
+            : getMatches(seasonId),
           getTeams(),
           getStadiums(),
-          getPhases(),
-          getPhaseQualification(),
+          getPhases(seasonId),
+          getPhaseQualification(seasonId),
         ]);
 
         if (ignore) {
@@ -149,7 +151,7 @@ export default function MatchesPage() {
     return () => {
       ignore = true;
     };
-  }, [appliedFilters, reloadCount, t]);
+  }, [appliedFilters, reloadCount, seasonId, t]);
 
   useEffect(() => {
     const disconnect =

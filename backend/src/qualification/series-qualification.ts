@@ -73,7 +73,10 @@ export interface SeriesMatch {
 }
 
 export interface SeriesSnapshot {
+  /** Equipos que juegan la Primera Ronda (los inscritos en la temporada). */
   teams: SeriesTeam[];
+  /** Nombres de todos los equipos, para nombrar en los mensajes a uno no inscrito. */
+  teamNames?: SeriesTeam[];
   phases: SeriesPhase[];
   matches: SeriesMatch[];
 }
@@ -373,7 +376,10 @@ export function computeSeriesQualification(
   snapshot: SeriesSnapshot,
 ): SeriesQualification {
   const teamNames = new Map(
-    snapshot.teams.map((team) => [team.team_id, team.name]),
+    [...(snapshot.teamNames ?? []), ...snapshot.teams].map((team) => [
+      team.team_id,
+      team.name,
+    ]),
   );
   const teamName = (teamId: number) =>
     teamNames.get(teamId) ?? `Equipo #${teamId}`;

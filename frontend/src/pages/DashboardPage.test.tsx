@@ -39,6 +39,14 @@ vi.mock('../api/matches', () => ({
     },
   ]),
 }));
+vi.mock('../api/seasons', () => ({
+  getSeries: vi.fn().mockResolvedValue([
+    { series_id: 1, name: 'Serie Nacional de Béisbol' },
+  ]),
+  createSeason: vi.fn(),
+  getSeasonTeams: vi.fn(),
+  updateSeasonTeams: vi.fn(),
+}));
 vi.mock('../api/dashboard-events', () => ({
   connectDashboardEvents: () => () => {},
 }));

@@ -32,8 +32,11 @@ export class MatchesController {
   }
 
   @Get()
-  async getAllMatches() {
-    return this.matchesService.getAllMatches();
+  async getAllMatches(
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
+  ) {
+    return this.matchesService.getAllMatches(seasonId);
   }
 
   @Get('search')
@@ -44,6 +47,8 @@ export class MatchesController {
     matchDate?: string,
     @Query('stadium') stadium?: string,
     @Query('phase') phase?: string,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId?: number,
   ) {
     return this.matchesService.searchMatches(
       awayTeam,
@@ -51,6 +56,7 @@ export class MatchesController {
       matchDate,
       stadium,
       phase,
+      seasonId,
     );
   }
 

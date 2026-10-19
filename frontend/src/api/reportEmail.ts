@@ -17,6 +17,8 @@ export interface SendReportEmailData {
   date?: string;
   stadiumId?: number;
   teamId?: number;
+  /** Temporada del reporte (los globales la ignoran). */
+  seasonId?: number;
 }
 
 export interface SendReportEmailResponse {

@@ -31,6 +31,8 @@ import type {
 } from '../types/team';
 import './TeamsPage.css';
 import { connectTeamsEvents } from '../api/teams-events';
+import { useSelectedSeason } from '../season/use-season';
+import { seasonLabel } from '../types/season';
 
 export function TeamsPage() {
 
@@ -44,6 +46,7 @@ export function TeamsPage() {
     useState('');  
   const { user } = useAuth();
   const { t } = useTranslation();
+  const season = useSelectedSeason();
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [nameFilter, setNameFilter] = useState('');
@@ -209,7 +212,8 @@ export function TeamsPage() {
     setFormError('');
 
     try {
-      await createTeam(data);
+      // Se inscribe en la temporada que se está viendo.
+      await createTeam(data, season.season_id);
 
       setIsCreateModalOpen(false);
       reloadTeams();
@@ -316,9 +320,21 @@ export function TeamsPage() {
         description={t('teams.description')}
         actions={
           isAdministrator ? (
-            <Button onClick={openCreateModal}>
-              {t('teams.newTeam')}
-            </Button>
+            <div className="teams-header-actions">
+              {season.started && (
+                <span className="teams-season-locked">
+                  {t('teams.seasonStarted', {
+                    season: seasonLabel(season),
+                  })}
+                </span>
+              )}
+              <Button
+                onClick={openCreateModal}
+                disabled={season.started}
+              >
+                {t('teams.newTeam')}
+              </Button>
+            </div>
           ) : (
             <Badge variant="neutral">
               {t('teams.viewOnly')}

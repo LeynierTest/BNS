@@ -30,9 +30,11 @@ export class ReportsController {
 
   @Get('standings')
   async standings(
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId: number | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
-    const content = await this.reportsService.standingsPdf();
+    const content = await this.reportsService.standingsPdf(seasonId);
 
     return this.pdf(response, 'tabla-posiciones.pdf', content);
   }
@@ -41,11 +43,14 @@ export class ReportsController {
   async matchesByTeams(
     @Param('homeTeamId', ParseIntPipe) homeTeamId: number,
     @Param('awayTeamId', ParseIntPipe) awayTeamId: number,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId: number | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const content = await this.reportsService.matchesByTeamsPdf(
       homeTeamId,
       awayTeamId,
+      seasonId,
     );
 
     return this.pdf(response, 'partidos-entre-equipos.pdf', content);
@@ -55,16 +60,19 @@ export class ReportsController {
   async matchesByDate(
     @Param('date', new ParseDateOnlyPipe()) date: string,
     @Query('stadiumId', new ParseIntPipe({ optional: true }))
-    stadiumId?: number,
-    @Res({ passthrough: true }) response?: Response,
+    stadiumId: number | undefined,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId: number | undefined,
+    @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const content = await this.reportsService.matchesByDatePdf(
       date,
       stadiumId,
+      seasonId,
     );
 
     return this.pdf(
-      response as Response,
+      response,
       'partidos-por-fecha.pdf',
       content,
     );
@@ -81,9 +89,11 @@ export class ReportsController {
 
   @Get('stadium-attendance')
   async stadiumAttendance(
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId: number | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
-    const content = await this.reportsService.stadiumAttendancePdf();
+    const content = await this.reportsService.stadiumAttendancePdf(seasonId);
 
     return this.pdf(response, 'asistencia-estadios.pdf', content);
   }
@@ -91,9 +101,11 @@ export class ReportsController {
   @Get('team-status/:teamId')
   async teamStatus(
     @Param('teamId', ParseIntPipe) teamId: number,
+    @Query('season_id', new ParseIntPipe({ optional: true }))
+    seasonId: number | undefined,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
-    const content = await this.reportsService.teamStatusPdf(teamId);
+    const content = await this.reportsService.teamStatusPdf(teamId, seasonId);
 
     return this.pdf(response, 'estado-equipo.pdf', content);
   }
